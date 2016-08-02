@@ -7,5 +7,7 @@ users of our product.
 Because the processor of the s32v234-evb platform is an ARM
 Cortex-A53, we use the ARM compiler to generate the binary files
 of our code examples.
-Each sample will have a  Makefile in whitch will set up a (CC)
+Each sample will have a  Makefile in which will set up a (CC)
 variable with the path of the ARM compiler from the user station.
+
+These samples are licenced under BSD-3-Clause
