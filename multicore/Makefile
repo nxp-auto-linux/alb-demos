@@ -4,7 +4,7 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 #
 
-LDFLAGS ?= -lpthread
+LDFLAGS += -lpthread
 include ../common.mk
 
 DEPS   := functions.h
@@ -17,3 +17,10 @@ multicore: $(OBJ)
 
 clean:
 	rm -f $(OBJ) multicore
+
+install:multicore
+	if [ -f $(INSTALLDIR) ]; then rm -rf $(INSTALLDIR); fi
+	mkdir -p $(INSTALLDIR)
+	install multicore $(INSTALLDIR)
+	install *.in $(INSTALLDIR)
+
