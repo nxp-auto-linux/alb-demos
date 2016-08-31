@@ -1,0 +1,65 @@
+S32V PCIe Shared Memory Example
+===============================
+
+Contents
+--------
+* About
+* Requirements
+* Configuration and running
+* Known limitations
+* Credits
+* Todo list
+
+
+About
+-----
+This demo is a basic, Linux-based, example of a pair of applications sharing
+a buffer of each other's memory and communicating over PCIe. The two apps can
+then read/write from/to their own or each others' shared mem, either using the
+CPU or a DMA.
+
+
+Requirements
+------------
+There are actually two different applications, one running as PCIe Root Context
+(RC) and one running as PCIe Endpoint (EP). The stated assumption is that both
+of them will run on Linux. The EP Linux kernel must run the S32VPCIE EP driver
+as per the demos' User Manual (see "Configuration and running").
+
+Also, though the requirements for the RC application are not hard-wired to a
+specific hardware platform, the current platform where the demo has only been
+tested on a S32V "Bluebox", with the LS2 running as Root Complex and the S32V
+running as Endpoint.
+
+
+Configuration and running
+-------------------------
+** For the time being, please refer to the user manual from the original
+** author of the applications. See also the Todo list.
+
+To compile the demos, simply run "make" from the demos folder. Two separate
+executables will be generated, one for each PCIe endpoint.
+
+
+Known limitations
+-----------------
+* Base addresses are hard-coded in both the RC and the EP applications
+* The demos are subject to the e9852 erratum, which restricts the read or write
+transactions from the RC to the S32V EP.
+
+
+Credits
+-------
+* Copyright © 2016 NXP Semiconductor
+* The original code of the applications, as well as the original version of the
+User Manual, are credited to Aurelian Floricica (aurelian.floricica@nxp.com)
+* Subsequent modifications to the work artifacts should be blamed onto
+Bogdan Hamciuc (bogdan.hamciuc@nxp.com)
+
+
+Todo list
+---------
+* Remove hardcoding of addresses and mappings
+* Port the original User Manual into this document
+* Add a multithreaded read command to both RC and EP
+* Port the applications on a S32V_EVB + S32V_PCIE platform
