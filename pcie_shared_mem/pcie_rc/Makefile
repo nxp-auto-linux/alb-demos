@@ -2,15 +2,11 @@
 # Copyright (C) 2016 NXP Semiconductor
 #
 
-include ../../common.mk
-.PHONY: all install clean
-
-LDFLAGS += -lpthread
+# Standard variables (defined or overridden from common.mk)
+LDFLAGS	+= -lpthread
+# Define or override global variables from common.mk
 OBJ	:= test_rc.o
 EXE	:= test_rc
-
-all: $(OBJ)
-	$(CC) -o $(EXE) $^ $(LDFLAGS)
 
 # $(INSTALLDIR) should have been prepared by the parent Makefile; do
 # nothing in case it hasn't, to avoid silly errors in case 'make' is
@@ -25,3 +21,6 @@ endif
 
 clean:
 	rm -rf $(OBJ) $(EXE)
+
+# Common variables and rule definitions
+include ../../common.mk

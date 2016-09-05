@@ -7,6 +7,10 @@
 LDFLAGS += -lpthread
 include ../common.mk
 
+# Temporarily override the target order from common.mk. This will be removed
+# after we factor out the 'clean' and 'install' targets.
+.DEFAULT_GOAL = multicore
+
 DEPS   := functions.h
 OBJ    := multicore.o functions.o
 
