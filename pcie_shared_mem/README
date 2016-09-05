@@ -26,19 +26,19 @@ There are actually two different applications, one running as PCIe Root Context
 of them will run on Linux. The EP Linux kernel must run the S32VPCIE EP driver
 as per the demos' User Manual (see "Configuration and running").
 
-Also, though the requirements for the RC application are not hard-wired to a
-specific hardware platform, the current platform where the demo has only been
-tested on a S32V "Bluebox", with the LS2 running as Root Complex and the S32V
+Note: though the requirements for the RC application are not hard-wired to a
+specific hardware platform, the only platform where the demo has been tested
+is the NXP "Bluebox", with the LS2 running as Root Complex and the S32V
 running as Endpoint.
 
 
 Configuration and running
 -------------------------
-** For the time being, please refer to the user manual from the original
-** author of the applications. See also the Todo list.
+To compile the demos, simply run "make" from this folder or from the parent
+folder containing all the demos.
+Two separate executables will be generated, one for the PCIe EP, one for the RC.
 
-To compile the demos, simply run "make" from the demos folder. Two separate
-executables will be generated, one for each PCIe endpoint.
+For instructions on how to run the demos, please refer to the user manual.
 
 
 Known limitations
@@ -53,7 +53,7 @@ Credits
 * Copyright © 2016 NXP Semiconductor
 * The original code of the applications, as well as the original version of the
 User Manual, are credited to Aurelian Floricica (aurelian.floricica@nxp.com)
-* Subsequent modifications to the work artifacts should be blamed onto
+* Subsequent modifications to the work artifacts should be blamed on
 Bogdan Hamciuc (bogdan.hamciuc@nxp.com)
 
 
