@@ -10,8 +10,6 @@ include ../common.mk
 DEPS   := functions.h
 OBJ    := multicore.o functions.o
 
-%.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
 multicore: $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
 

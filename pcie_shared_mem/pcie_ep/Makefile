@@ -12,9 +12,6 @@ EXE = test_ep
 OBJ	:= test_ep.o
 DEPS	:= pcie_ops.h
 
-%.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
-
 all: $(OBJ)
 	$(CC) -o $(EXE) $^ $(LDFLAGS)
 
