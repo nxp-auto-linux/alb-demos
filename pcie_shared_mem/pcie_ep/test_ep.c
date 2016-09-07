@@ -27,10 +27,10 @@
 #define MAP_DDR_SIZE	1024 * 1024 * 1 /* 1MB  */
 
 /* bhamciu1 FIXME remove address hardcoding */
-#define PCIE_ADDR	0x72000000
-#define CPU_ADDR	0x8FF00000
-#define RC_ADDR		0x8350000000
-#define EP_DBGFS_FILE	"/sys/kernel/debug/ep_dbgfs/ep_file"
+#define S32V_PCIE_BASE_ADDR	0x72000000
+#define S32V_LOCAL_DDR_ADDR	0x8FF00000
+#define RC_DDR_ADDR			0x8350000000
+#define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
 
 volatile sig_atomic_t dma_flag = 0;
 volatile sig_atomic_t cntSignalHandler = 0;
@@ -97,8 +97,8 @@ int main(int argc, char *argv[])
 	
 	/* Outbound region structure */
 	struct s32v_outbound_region outb1 = {
-		RC_ADDR,	/* target_addr = CPU_ADDR */
-		PCIE_ADDR,	/* base_addr */
+		RC_DDR_ADDR,	/* target_addr */
+		S32V_PCIE_BASE_ADDR,	/* base_addr */
 		MAP_DDR_SIZE,	/* size >= 64K(min for PCIE on S32V) */
 		0,		/* region number */
 		0		/* region type = mem */
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 
 	struct s32v_inbound_region inb1 = {
 		2,		/* BAR2 */
-		CPU_ADDR,	/* locally-mapped DDR on EP */
+		S32V_LOCAL_DDR_ADDR,	/* locally-mapped DDR on EP */
 		0		/* region 0 */
 	};
 start:
@@ -204,7 +204,6 @@ start:
 		src_buff = (unsigned int *)malloc(MAP_DDR_SIZE);
 		dest_buff = (unsigned int *)malloc(MAP_DDR_SIZE);
 
-		/* bhamciu1 FIXME remove hardcoding of filename */
 		fd1 = open(EP_DBGFS_FILE, O_RDWR);
 		if (fd1 < 0) {
 			printf("%s %d\n", "Error while opening debug file ", errno);
@@ -224,7 +223,7 @@ start:
 		/* MAP DDR free 1M area. This was reserved at boot time */
 		mapDDR = mmap(NULL, MAP_DDR_SIZE,
 				PROT_READ | PROT_WRITE,
-				MAP_SHARED, fd2, CPU_ADDR);
+				MAP_SHARED, fd2, S32V_LOCAL_DDR_ADDR);
 		if (!mapDDR) {
 			printf("\n /dev/mem DDR area mapping FAILED");
 			goto err;
@@ -235,7 +234,7 @@ start:
 		/* Map PCIe area */
 		mapPCIe = mmap(NULL, MAP_DDR_SIZE,
 				PROT_READ | PROT_WRITE,
-				MAP_SHARED, fd2, PCIE_ADDR);
+				MAP_SHARED, fd2, S32V_PCIE_BASE_ADDR);
 		if (!mapPCIe) {
 			printf("\n /dev/mem PCIe area mapping FAILED");
 			goto err;
@@ -356,8 +355,8 @@ start:
 		dma_single.flags = 0;
 		dma_flag = 0;
 		dma_single.size = mapsize;
-		dma_single.sar = CPU_ADDR; /* bhamciu1 FIXME remove hardcoding */
-		dma_single.dar = PCIE_ADDR; /* bhamciu1 FIXME remove hardcoding */
+		dma_single.sar = S32V_LOCAL_DDR_ADDR;
+		dma_single.dar = S32V_PCIE_BASE_ADDR;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_WRITE_ELEM | DMA_FLAG_EN_DONE_INT | DMA_FLAG_LIE);
 		
@@ -380,8 +379,8 @@ start:
 		dma_single.flags = 0;
 		dma_flag = 0;
 		dma_single.size = mapsize;
-		dma_single.sar = PCIE_ADDR; /* bhamciu1 FIXME remove hardcoding */
-		dma_single.dar = CPU_ADDR; /* bhamciu1 FIXME remove hardcoding */
+		dma_single.sar = S32V_PCIE_BASE_ADDR;
+		dma_single.dar = S32V_LOCAL_DDR_ADDR;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_READ_ELEM | DMA_FLAG_EN_DONE_INT  | DMA_FLAG_LIE);
 		
