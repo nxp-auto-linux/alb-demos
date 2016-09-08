@@ -26,11 +26,19 @@
 
 #define MAP_DDR_SIZE	1024 * 1024 * 1 /* 1MB  */
 
-/* bhamciu1 FIXME remove address hardcoding */
+#define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
+
+/* FIXME remove hardcoding of addresses */
 #define S32V_PCIE_BASE_ADDR	0x72000000
 #define S32V_LOCAL_DDR_ADDR	0x8FF00000
-#define RC_DDR_ADDR			0x8350000000
-#define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
+/* The RC's shared DDR mapping is different in the Bluebox vs EVB case.
+ * For the moment, this setting is statically defined in the Makefile.
+ */
+#if defined PCIE_SHMEM_BLUEBOX			/* LS2-S32V */
+#define RC_DDR_ADDR		0x8350000000
+#else						/* EVB-PCIE */
+#define RC_DDR_ADDR		0x8FF00000
+#endif
 
 volatile sig_atomic_t dma_flag = 0;
 volatile sig_atomic_t cntSignalHandler = 0;
@@ -113,7 +121,7 @@ start:
 	go1 = 0;
 	go2 = 0;
 	cmd = 0xFF;
-	printf("\nHello, S32V_EP PCIe mem test app #1\n");
+	printf("\nHello PCIe EP mem test app\n");
 	printf("\n Test cases : \
 	\n 1. Single 1M Write transfer from local buffer to LS_RC DDR mem (pattern=0x%x)\
 	\n 2. Single 1M Read transfer from LS_RC DDR mem to local buffer\
