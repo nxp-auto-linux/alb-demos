@@ -89,12 +89,12 @@ start :
 	cmd = 0xFF;
 	printf("\nHello PCIe RC mem test app");
 	printf("\n Test cases :\
-	\n 1. Single 1M Write transfer from local buffer to S32V_EP mem (pattern = 0x%x)\
+	\n 1. Single 1M Write transfer from local buffer to S32V_EP mem (pattern = %#x)\
 	\n 2. Single 1M Read  transfer from S32V_EP mem to local buffer\
-	\n 3. Variable size throughput test Write(pattern = 0x%x) + Read to/from S32V_EP mem\
+	\n 3. Variable size throughput test Write(pattern = %#x) + Read to/from S32V_EP mem\
 	\n 4. Fill local DDR_BASE + 1M with DW pattern 0x55AA55AA\
 	\n 5. Read and print first and last 32DW(128bytes) in local DDR\
-	\n 6. Multiple 1M Write transfers from local buffer to S32V_EP mem (pattern = 0x%x)\
+	\n 6. Multiple 1M Write transfers from local buffer to S32V_EP mem (pattern = %#x)\
 	\n    This is essentially the same as #1, only looped and multithreaded.\
 	\n    Usable for performance tests and some errata validation.\
 	\n 7. Exit app\
@@ -214,13 +214,13 @@ start :
 
 		printf("\n First 32 DWORDS(1DW = 4bytes) copied from S32V_EP");
 		for (i = 0 ; i < 32; i++) {
-			printf("\n *(dest_buff + 0x%8x) = 0x%08x", i, *(dest_buff + i));
+			printf("\n *(dest_buff + %#8x) = %#08x", i, *(dest_buff + i));
 		}
 		/* Resize for last 32 DWs */
 		j = (mapsize / 4) - 32;
 		printf("\n Last 32 DWORDS(1DW = 4bytes) copied from S32V_EP");
 		for (i = j ; i < mapsize / 4; i++) {
-			printf("\n *(dest_buff + 0x%8x) = 0x%08x", i, *(dest_buff + i));
+			printf("\n *(dest_buff + %#8x) = %#08x", i, *(dest_buff + i));
 		}
 		break;
 	case 3:
@@ -269,12 +269,12 @@ start :
 		/* Read DDR area(minimal check). Can verify what EP has written */
 		printf("\n First 32 DWORDS(1DW = 4 bytes) from local mapped DDR");
 		for (i = 0 ; i < 32; i++) {
-			printf("\n *(mapDDR + 0x%8x) = 0x%08x", i, *(mapDDR + i));
+			printf("\n *(mapDDR + %#8x) = %#08x", i, *(mapDDR + i));
 		}
 		j = (mapsize / 4) - 32;
 		printf("\n Last 32 DWORDS(1DW = 4bytes) from local mapped DDR");
 		for (i = j ; i < mapsize / 4; i++) {
-			printf("\n *(mapDDR + 0x%8x) = 0x%08x", i, *(mapDDR + i));
+			printf("\n *(mapDDR + %#8x) = %#08x", i, *(mapDDR + i));
 		}
 		break;
 	case 6:

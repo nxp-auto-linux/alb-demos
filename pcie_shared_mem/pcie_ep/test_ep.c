@@ -123,14 +123,14 @@ start:
 	cmd = 0xFF;
 	printf("\nHello PCIe EP mem test app\n");
 	printf("\n Test cases : \
-	\n 1. Single 1M Write transfer from local buffer to LS_RC DDR mem (pattern=0x%x)\
+	\n 1. Single 1M Write transfer from local buffer to LS_RC DDR mem (pattern=%#x)\
 	\n 2. Single 1M Read transfer from LS_RC DDR mem to local buffer\
-	\n 3. Variable size throughput test Write(pattern = 0x%x) + Read to/from LS_RC DDR mem\
+	\n 3. Variable size throughput test Write(pattern = %#x) + Read to/from LS_RC DDR mem\
 	\n 4. Fill local DDR_BASE + 1M with pattern 0xdeadbeef\
 	\n 5. Read and print first and last 32DW(128bytes) bytes in local DDR\
 	\n 6. Write 1M from local DDR to LS_RC DDR mem through DMA single transfer\
 	\n 7. Read 1M from LS_RC DDR mem to local DDR through DMA single transfer\
-	\n 8. Multiple 1M Write transfers from local buffer to LS_RC DDR mem (pattern=0x%x)\
+	\n 8. Multiple 1M Write transfers from local buffer to LS_RC DDR mem (pattern=%#x)\
 	\n    This is essentially the same as #1, only looped and multithreaded.\
 	\n    Usable for performance tests and some errata validation.\
 	\n 9. Exit app\
@@ -291,13 +291,13 @@ start:
 		memcpy((unsigned int *)dest_buff,(unsigned int *)mapPCIe, mapsize);
 		printf("\n First 32 DWORDS(1DW = 4bytes) copied from RC");
 		for (i = 0; i < 32; i++) {
-			printf("\n *(dest_buff + 0x%8x) = 0x%08x", i, *(dest_buff + i));
+			printf("\n *(dest_buff + %#8x) = %#08x", i, *(dest_buff + i));
 		}
 		/* Resize for last 32 DWs */
 		j = (mapsize / 4) - 32;
 		printf("\n Last 32 DWORDS(1DW = 4bytes) copied from RC");
 		for (i = j ; i < mapsize / 4; i++) {
-			printf("\n *(dest_buff + 0x%8x) = 0x%08x", i, *(dest_buff + i));
+			printf("\n *(dest_buff + %#8x) = %#08x", i, *(dest_buff + i));
 		}
 		break;
 	/* R/W thoughput test */
@@ -350,12 +350,12 @@ start:
 	case 5:
 		printf("\n First 32 DWORDS(1DW = 4bytes) from local mapped DDR");
 		for (i = 0 ; i < 32; i++) {
-			printf("\n *(mapDDR + 0x%8x) = 0x%08x", i, *(mapDDR + i));
+			printf("\n *(mapDDR + %#8x) = %#08x", i, *(mapDDR + i));
 		}
 		j = (mapsize / 4) - 32;
 		printf("\n Last 32 DWORDS(1DW = 4bytes) from local mapped DDR");
 		for (i = j ; i < mapsize/4; i++) {
-			printf("\n *(mapDDR + 0x%8x) = 0x%08x", i, *(mapDDR + i));
+			printf("\n *(mapDDR + %#8x) = %#08x", i, *(mapDDR + i));
 		}
 		break;
 	/* SEND DMA single  block */
