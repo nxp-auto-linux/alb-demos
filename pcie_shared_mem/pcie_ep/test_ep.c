@@ -24,7 +24,7 @@
 #define CMD3_PATTERN	0x67
 #define CMD8_PATTERN	CMD1_PATTERN
 
-#define MAP_DDR_SIZE	1024 * 1024 * 1 /* 1MB  */
+#define MAP_DDR_SIZE	1024 * 1024 * 1
 
 #define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
 
@@ -152,7 +152,7 @@ start:
 			go1 = 1;
 			break;
 		case '3':
-			printf("\n Enter bytes transfer size in hexa(max 1M, 128bytes multiple): ");
+			printf("\n Enter bytes transfer size in hex (max 1M, 128bytes multiple): ");
 			do {
 				scanf("%s" , word);
 				if (!sscanf(word, "%x", &mapsize))
@@ -214,7 +214,7 @@ start:
 
 		fd1 = open(EP_DBGFS_FILE, O_RDWR);
 		if (fd1 < 0) {
-			printf("%s %d\n", "Error while opening debug file ", errno);
+			perror("Error while opening debug file");
 			goto err;
 		} else {
 			printf("\n Ep debug file opened successfully");
@@ -222,7 +222,7 @@ start:
 
 		fd2 = open("/dev/mem", O_RDWR);
 		if (fd2 < 0) {
-			printf("%s %d\n", "Error while opening /dev/mem file", errno);
+			perror("Error while opening /dev/mem file");
 			goto err;
 		} else {
 			printf("\n Mem opened successfully");
@@ -233,7 +233,7 @@ start:
 				PROT_READ | PROT_WRITE,
 				MAP_SHARED, fd2, S32V_LOCAL_DDR_ADDR);
 		if (!mapDDR) {
-			printf("\n /dev/mem DDR area mapping FAILED");
+			perror("/dev/mem DDR area mapping FAILED");
 			goto err;
 		} else {
 			printf("\n /dev/mem DDR area mapping OK");
@@ -244,7 +244,7 @@ start:
 				PROT_READ | PROT_WRITE,
 				MAP_SHARED, fd2, S32V_PCIE_BASE_ADDR);
 		if (!mapPCIe) {
-			printf("\n /dev/mem PCIe area mapping FAILED");
+			perror("/dev/mem PCIe area mapping FAILED");
 			goto err;
 		} else {
 			printf("\n /dev/mem PCIe area mapping OK");
@@ -253,7 +253,7 @@ start:
 		/* Setup outbound window for accessing RC mem */
 		ret = ioctl(fd1, SETUP_OUTBOUND, &outb1);
 		if (ret < 0) {
-			printf("\n Error while setting outbound1 region");
+			perror("Error while setting outbound1 region");
 			goto err;
 		} else {
 			printf("\n Outbound1 region setup successfully");
@@ -262,7 +262,7 @@ start:
 		/* Same thing for inbound window for transactions from RC */
 		ret = ioctl(fd1, SETUP_INBOUND, &inb1);
 		if (ret < 0) {
-			printf("\nError while setting inbound1 region");
+			perror("Error while setting inbound1 region");
 			goto err;
 		} else {
 			printf("\n Inbound1 region setup successfully");
@@ -273,7 +273,7 @@ start:
 		printf("\n LOG USspace getpid() = %d", pid);
 		ret = ioctl(fd1, STORE_PID, &pid);	
 		if (ret < 0) {
-			printf("\n Error while sending pid to driver, DMA may not work");
+			perror("Error while sending pid to driver, DMA may not work");
 		} else {
 			printf("\n Pid sent successfully to driver");
 		}

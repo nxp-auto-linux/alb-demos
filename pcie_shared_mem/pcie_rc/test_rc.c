@@ -116,7 +116,7 @@ start :
 			go1 = 1;
 			break;
 		case '3':
-			printf("\n Enter bytes transfer size in hexa(max 1M, 128bytes multiple): ");
+			printf("\n Enter bytes transfer size in hex (max 1M, 128bytes multiple): ");
 			do {
 				scanf("%s" , word);
 				if (!sscanf(word, "%x", &mapsize))
@@ -172,10 +172,10 @@ start :
 
 		fd1 = open("/dev/mem", O_RDWR);
 		if (fd1 < 0) {
-			printf("%s %d\n", "Errors opening /dev/mem file ", errno);
+			perror("Errors opening /dev/mem file");
 			goto err;
 		} else {
-			printf("\n  /dev/mem file opened successfully");
+			printf("\n /dev/mem file opened successfully");
 		}
 		
 		/* MAP PCIe area */
@@ -184,7 +184,7 @@ start :
 				PROT_READ | PROT_WRITE,
 				MAP_SHARED, fd1, EP_BAR2_ADDR);
 		if (!mapPCIe) {
-			printf("\n /dev/mem PCIe area mapping  FAILED");
+			perror("/dev/mem PCIe area mapping FAILED");
 			goto err;
 		} else {
 			printf("\n /dev/mem PCIe area mapping  OK");
@@ -195,7 +195,7 @@ start :
 				PROT_READ | PROT_WRITE,
 				MAP_SHARED, fd1, RC_DDR_ADDR);
 		if (!mapDDR) {
-			printf("\n /dev/mem DDR area mapping FAILED");
+			perror("/dev/mem DDR area mapping FAILED");
 			goto err;
 		} else {
 			printf("\n /dev/mem DDR area mapping OK");
