@@ -1,0 +1,57 @@
+The networking sample  will simulate a TCP server-client chat. The connection
+will be established through sockets and the communication is basically a
+stop-and-wait sequence: both server and client wait for a response after sending
+a message.
+
+Execution flow:
+
+	*	From the server compilation will result an executable file that
+	receives as parameter the port.
+	*	In order to find the server(if it is available), the client should
+	know the name or its IP address. There are two arguments that
+	should be specified at the execution, the IP address and the number
+	of the port that the socket will use.
+	*	Practically, after the "make"/"make server"/"make client" command,
+	we must turn on the server and give it a number for the	port. For example,
+	if we want to use the port with the number 1923, the right command will
+	be "./server 1923"
+	*	Once the server is turned on, the client can connect to it. Assuming
+	that the IP address of the server is 192.168.0.1, the client will connect
+	with the command "./client 192.168.0.1 1923". After that, the client can
+	start the conversation.
+
+Example:
+	* Start server using port 1923:
+		./server 1923
+	* Start client on the same host:
+		./client 127.0.0.1 1923
+
+
+------------                                           ------------
+-          -     (Connection created with success)      -          -
+-  Client  - <---------------------------------------> -  Server  -
+-          -                                           -          -
+------------                     |                     ------------
+|    ^                         /   \                         |    ^
+|    |                       /       \                       |    |
+|____|                     /           \                     |____|
+(Connection refused)     /               \             (Connection refused)
+                       /                   \
+                     /                       \
+                   /                           \
+                 /                               \
+               /                                   \
+             /                                       \
+           /                                           \
+         /                                               \
+------------                                            ------------
+-          -  --------------------------------------->  -          -
+-  Client  -           (Some data packages)             -  Server  -
+-          -  <--------------------------------------   -          -
+------------                                            ------------
+      |                                                        |
+      |                                                        |
+      |                                                        |
+
+      X                                                        X
+(Close connection)                                     (Close connection)
