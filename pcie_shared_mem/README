@@ -1,11 +1,12 @@
-S32V PCIe Shared Memory Example
-===============================
+S32V234 PCIe Shared Memory Example
+==================================
 
 Contents
 --------
 * About
-* Requirements
+* Platforms
 * Configuration and running
+* Applications description
 * Known limitations
 * Credits
 * Todo list
@@ -14,52 +15,272 @@ Contents
 About
 -----
 This demo is a basic, Linux-based, example of a pair of applications sharing
-a buffer of each other's memory and communicating over PCIe. The two apps can
-then read/write from/to their own or each others' shared mem, either using the
-CPU or a DMA.
+a buffer in each other's memory and communicating over PCIe. The two apps can
+then read/write from/to their own or the other's shared mem, using either the
+CPU or DMA.
+The demos can run in two different setups:
+	. In a "NXP Bluebox";
+	. In a S32V234 EVB-PCIE configuration.
 
 
-Requirements
-------------
-There are actually two different applications, one running as PCIe Root Context
-(RC) and one running as PCIe Endpoint (EP). The stated assumption is that both
-of them will run on Linux. The EP Linux kernel must run the S32VPCIE EP driver
-as per the demos' User Manual (see "Configuration and running").
+Platforms
+---------
+The demo consists of two applications, one running as PCIe Root Complex (RC)
+and one running as PCIe Endpoint (EP). The stated assumption is that both
+of them will run on Linux.
 
-Note: though the requirements for the RC application are not hard-wired to a
-specific hardware platform, the only platform where the demo has been tested
-is the NXP "Bluebox", with the LS2 running as Root Complex and the S32V
-running as Endpoint.
+Although the requirements for the RC application are not tied to a specific
+hardware platform, the demos have been tested in the following two
+configurations:
+	. "NXP Bluebox", with the LS2080A running as RC and the S32V234-PCIE
+	  running as EP;
+	. S32V234-EVB + S32V234-PCIE, with the EVB running as RC and the PCIE
+	  running as EP.
+
+For the time being, all values (addresses, sizes) necessary for
+shared memory communication are hard-wired, so the configuration selection is
+made at compile-time - see the "Configuration and running" section of this
+document.
+
+
+Prerequisites
+-------------
+Before compiling and running the demos, the following prerequisites are
+assumed depending on the chosen configuration:
+
+A) In the "NXP Bluebox" setup
+	. Linux and u-boot images for LS2080A (RC) from SDK 2.0;
+	. Linux image for S32V234-PCIE (EP) built from the Auto Linux BSP;
+	. The EP Linux kernel must run the S32V-PCIE EP driver as per the
+	  S32V234 Linux BSP User Manual (see "Configuration and running");
+	. Shared memory must be reserved at boot-time:
+		- On the LS2080A edit the 'setbootargs' u-boot environment
+		  variable by appending 'mem=13568M';
+		- On the S32V234-PCIE edit the 'mmcargs' u-boot environment
+		  variable as follows:
+		  $setenv mmcargs setenv bootargs \
+		  	console=${console},${baudrate} root=${mmcroot} mem=255M
+		  then save the environment: '$ saveenv'
+	. The S32V234-PCIE EP demo uses debugfs, so it has to be mounted
+	  once Linux has booted up:
+	  # mount -t debugfs none /sys/kernel/debug
+	. Please also refer to the Auto Linux BSP User Manual, chapter
+	  "Setting Up the PCIe EP Mode".
+
+B) In the EVB-PCIE setup
+	. U-boot and Linux images for S32V234-PCIE (EP) and S32V234-EVB (RC)
+	  built from the Auto Linux BSP as per the User Manual;
+	. NOTE: While the kernel image for the S32V234-PCIE running as EP
+	  must have the CONFIG_PCI_S32V234_EP config option enabled, the image
+	  for the S32V234-EVB (RC) must _not_ have that option enabled.
+	. NOTE: the u-boot source must be amended with the following patch:
+---------------
+diff --git a/include/configs/s32v234evb.h b/include/configs/s32v234evb.h
+index 999f66e..7bf8ef0 100644
+--- a/include/configs/s32v234evb.h
++++ b/include/configs/s32v234evb.h
+@@ -87,7 +87,7 @@
+ #define CONFIG_SYS_INIT_SP_OFFSET \
+        (CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE - CONFIG_SYS_TEXT_OFFSET)
+
+-/* #define CONFIG_CMD_PCI */
++#define CONFIG_CMD_PCI
+ #ifdef CONFIG_CMD_PCI
+ #define CONFIG_GICSUPPORT
+ #define CONFIG_USE_IRQ
+diff --git a/include/configs/s32v234pcie.h b/include/configs/s32v234pcie.h
+index 0c9756a..f3d0986 100644
+--- a/include/configs/s32v234pcie.h
++++ b/include/configs/s32v234pcie.h
+@@ -75,7 +75,7 @@
+ #define CONFIG_SYS_INIT_SP_OFFSET \
+        (CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE - CONFIG_SYS_TEXT_OFFSET)
+
+-/* #define CONFIG_CMD_PCI */
++#define CONFIG_CMD_PCI
+ #ifdef CONFIG_CMD_PCI
+ #define CONFIG_PCIE_EP_MODE
+ #define CONFIG_GICSUPPORT
+---------------
+
+	. Shared memory must be reserved at boot-time:
+		- On the LS2080A edit the 'setbootargs' u-boot environment
+		  variable by appending 'mem=13568M';
+		- On the S32V234-PCIE edit the 'mmcargs' u-boot environment
+		  variable as follows:
+		  $setenv mmcargs setenv bootargs \
+		  	console=${console},${baudrate} root=${mmcroot} mem=255M
+		  then save the environment: '$ saveenv'
+	. The S32V234-PCIE EP demo uses debugfs, so it has to be mounted
+	  once Linux has booted up:
+	  # mount -t debugfs none /sys/kernel/debug
+	. Please also refer to the Auto Linux BSP User Manual, chapter
+	  "Setting Up the PCIe EP Mode".
 
 
 Configuration and running
 -------------------------
-To compile the demos, simply run "make" from this folder or from the parent
-folder containing all the demos.
+To compile the demos, run "make" from this folder or from the parent folder
+which contains all other Auto Linux BSP demos. NOTE: the local (host) build
+environment must have the CROSS_COMPILE environment variable correctly set for
+your cross-compiler (e.g. "aarch64-linux-gnu-" for the Linaro toolchain).
+
+To manually select the current setup (NXP Bluebox or S32V234 EVB + PCIE),
+pass the "S32V_BOARD_SETUP=<chosen_setup>" argument on the make command-line,
+where "chosen_setup" can be either PCIE_SHMEM_BLUEBOX or PCIE_SHMEM_EVB.
+If S32V_BOARD_SETUP is omitted altogether, PCIE_SHMEM_BLUEBOX is selected by default.
+
+E.g.:
+[pcie_shared_mem/]> make S32V_BOARD_SETUP=PCIE_SHMEM_EVB
+  make S32V_BOARD_SETUP=PCIE_SHMEM_EVB -C pcie_rc ;  make S32V_BOARD_SETUP=PCIE_SHMEM_EVB -C pcie_ep ;
+  make[1]: Entering directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_rc'
+  aarch64-linux-gnu-gcc -o test_rc.o -c test_rc.c -DPCIE_SHMEM_EVB -Wall
+  aarch64-linux-gnu-gcc -o test_rc test_rc.o -lpthread
+  make[1]: Leaving directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_rc'
+  make[1]: Entering directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_ep'
+  aarch64-linux-gnu-gcc -o test_ep.o -c test_ep.c -g -DPCIE_SHMEM_EVB -Wall
+  aarch64-linux-gnu-gcc -o test_ep test_ep.o -lpthread
+  make[1]: Leaving directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_ep'
+[pcie_shared_mem/]>
+
+[pcie_shared_mem/]> make
+  make S32V_BOARD_SETUP= -C pcie_rc ;  make S32V_BOARD_SETUP= -C pcie_ep ;
+  make[1]: Entering directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_rc'
+  aarch64-linux-gnu-gcc -o test_rc.o -c test_rc.c -DPCIE_SHMEM_BLUEBOX -Wall
+  aarch64-linux-gnu-gcc -o test_rc test_rc.o -lpthread
+  make[1]: Leaving directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_rc'
+  make[1]: Entering directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_ep'
+  aarch64-linux-gnu-gcc -o test_ep.o -c test_ep.c -g -DPCIE_SHMEM_BLUEBOX -Wall
+  aarch64-linux-gnu-gcc -o test_ep test_ep.o -lpthread
+  make[1]: Leaving directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_ep'
+[pcie_shared_mem/]>
+
 Two separate executables will be generated, one for the PCIe EP, one for the RC.
 
-For instructions on how to run the demos, please refer to the user manual.
+
+Applications description
+------------------------
+Each of the two applications sets up a shared buffer (preallocated at boot-time)
+that the peer application can read from or write into via PCIe.  The local CPUs
+are also able to access the local buffers. Therefore, the following addresses
+are employed in the two applications:
+  a) In the RC application
+	. EP_BAR2_ADDR - This is the address of the BAR2 PCIe register of the
+	  S32V PCIE (EP) board as seen from the Linux instance running on RC.
+	  In the current setup, the EP configures BAR2 as 1M 32-bit
+	  non-prefetchable memory.
+	  The RC accesses the EP's shared buffer by locally mapping EP_BAR2_ADDR
+	  and writing at the mapped address. The transaction is then translated
+	  on EP side via a inbound window.
+
+	  This address can be obtained from the Linux terminal by looking at the
+	  output of the "lspci -vv" command. The relevant output from the
+	  command is of the following form:
+
+	  Memory at 1446100000 (32-bit, non-prefetchable) [size=1M] 
+
+	  NOTE: The "lspci" command from the Busybox shell does not support the
+	  "-v" or "-vv" flags; if the hardware setup does not match the
+	  addresses currently hard-coded in the demos sources, one would have to
+	  install the pciutils package in the rootfs in order to determine the
+	  correct values.
+
+	. RC_DDR_ADDR - This is the physical address of the local buffer
+	  reserved at boot time for PCIe sharing. The buffer is 1M in size.
+	  The buffer is expectedly placed at the end of the physical memory and
+	  its address can be obtained from the Linux command-line via the
+	  command "cat /proc/iomem" and inspecting the System RAM field, from
+	  the output which is expectedly of the following form:
+
+	  02000000-0200ffff : /i2c@2000000
+	  ...
+	  8080000000-834fffffff : System RAM
+
+	  (In this example, the reserved buffer will be placed at 0x8350000000.)
+
+ b) In the EP application
+ 	. S32V_PCIE_BASE_ADDR - This is the base address of the PCIe config
+	  space. The address is defined in the S32V234 Reference Manual.
+	. S32V_LOCAL_DDR_ADDR - This is the physical address of the local buffer
+	  reserved at boot time for PCIe sharing. The buffer is 1M in size.
+	  The buffer is expectedly placed at the end of the physical memory and
+	  its address can be obtained via the same method as RC_DDR_ADDR in the
+	  RC demo (see above).
+	. RC_DDR_ADDR - This is the physical address of the remote buffer,
+	  residing in RC physical mem, which the peer RC will share over PCIe.
+	  Its value must necessarily be the same as "RC_DDR_ADDR" from the RC
+	  application setup (see above).
+
+The PCIe EP application sets up inbound and outbound translation windows
+for transactions coming from / going to the RC. It does so via ioctls provided
+by the PCIe-EP driver compiled in the Linux kernel.
+
+The applications support a number of commands, via a simple CLI. Available
+commands are listed when the applications start and also after every command
+execution.
+ a) The RC application supports the following commands:
+	1. Single 1M 'memcpy' write to the EP DDR shared buffer. This fills the
+	EP buffer with a predefined byte-pattern.
+	2. Single 1M 'memcpy' read from the EP DDR buffer. This reads the buffer
+	shared by the EP and prints some of its content.
+	3. Variable size test write/read to/from the EP DDR shared buffer. This
+	combines commands #1 and #2 to measure the throughput of the two types
+	of transfers.
+	4. Fill local DDR buffer with a predefined pattern, different from the
+	patterns used in other commands, so it functions as a buffer "clear".
+	5. Read and print the starting and ending bytes of the local DDR buffer.
+	This command can be used after other commands which alter the local DDR
+	buffer, for a visual inspection of the results.
+	6. Multiple 1M 'memcpy' writes to the EP DDR shared buffer. This is
+	essentially the same as #1, only looped and multithreaded. WARNING: in
+	the tested setups at least, the command can take a while to complete.
+
+ b) The EP application supports the following commands:
+ 	1. Single 1M 'memcpy' write to the RC DDR shared buffer. This fills the
+	RC buffer with a predefined byte-pattern.
+	2. Single 1M 'memcpy' read from the RC DDR buffer. This reads the buffer
+	shared by the RC and prints some of its content.
+	3. Variable size test write/read to/from the RC DDR shared buffer. This
+	combines commands #1 and #2 to measure the throughput of the two types
+	of transfers.
+	4. Fill local DDR buffer with a predefined pattern, different from the
+	patterns used in other commands, so it functions as a buffer "clear".
+	5. Read and print the starting and ending bytes of the local DDR buffer.
+	This command can be used after other commands which alter the local DDR
+	buffer, for a visual inspection of the results.
+	6. Single 1M DMA write from the EP DDR buffer to the RC DDR buffer.
+	Unlike #1, this command uses the internal S32V PCIe DMA engine. After
+	the command is placed, completion is waited for by polling for a flag.
+	The flag is set in a signal handler after the kernel S32V PCIe driver
+	sends the appropriate signal to the application's user-space process.
+	7. Single 1M DMA read from the RC DDR buffer into the EP DDR buffer.
+	Unlike #2, this command uses the internal S32V PCIe DMA engine. Command
+	completion is signaled via the same mechanism as for #6.
+	8. Multiple 1M 'memcpy' writes to the RC DDR buffer. This is essentially
+	the same as #1, only looped and multithreaded. WARNING: in the tested
+	setups at least, the command can take a while to complete. Also, due to
+	a known hardware erratum, this command may freeze the RC machine.
 
 
 Known limitations
 -----------------
-* Base addresses are hard-coded in both the RC and the EP applications
-* The demos are subject to the e9852 erratum, which restricts the read or write
-transactions from the RC to the S32V EP.
+. Base addresses are hard-coded in both the RC and the EP applications
+. The demos are subject to the e9852 erratum, which restricts the read or write
+  transactions from the RC to the S32V EP.
+. PCIe hotplug is not currently supported. Consequently, in the S32V EVB+PCIE
+  setup, one will have to boot the PCIE (EP) board first and the EVB (RC) second
+  in order for the for the latter to discover the former on the PCIe bus.
 
 
 Credits
 -------
-* Copyright © 2016 NXP Semiconductor
-* The original code of the applications, as well as the original version of the
+. Copyright © 2016 NXP Semiconductor
+. The original code of the applications, as well as the original version of the
 User Manual, are credited to Aurelian Floricica (aurelian.floricica@nxp.com)
-* Subsequent modifications to the work artifacts should be blamed on
+. Subsequent modifications to the work artifacts should be blamed on
 Bogdan Hamciuc (bogdan.hamciuc@nxp.com)
 
 
 Todo list
 ---------
-* Remove hardcoding of addresses and mappings
-* Port the original User Manual into this document
-* Add a multithreaded read command to both RC and EP
-* Port the applications on a S32V_EVB + S32V_PCIE platform
+. Remove hardcoding of addresses and mappings
