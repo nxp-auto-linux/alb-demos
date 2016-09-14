@@ -1,18 +1,17 @@
 #
 # Copyright (C) 2016 NXP Semiconductor
 #
+include ../pcie_shmem_common.mk
 
 LDFLAGS	+= -lpthread
 
 CFLAGS	+= -g
-ifeq ($(SETUP), PCIE_SHMEM_BLUEBOX)
-	CFLAGS += -DPCIE_SHMEM_BLUEBOX
-else
-	CFLAGS += -DPCIE_SHMEM_EVB
-endif
+# $(SETUP) should have been properly set by the parent Makefile
+CFLAGS	+= -D$(S32V_BOARD_SETUP)
 
 OBJ	+= test_ep.o
 DEPS	:= pcie_ops.h
 EXE	:= test_ep
 
+# this one should be last on the include list
 include ../../common.mk

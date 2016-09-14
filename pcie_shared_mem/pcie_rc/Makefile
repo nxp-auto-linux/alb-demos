@@ -1,15 +1,12 @@
 #
 # Copyright (C) 2016 NXP Semiconductor
 #
+include ../pcie_shmem_common.mk
 
-ifeq ($(SETUP), PCIE_SHMEM_BLUEBOX)
-	CFLAGS += -DPCIE_SHMEM_BLUEBOX
-else
-	CFLAGS += -DPCIE_SHMEM_EVB
-endif
-
+CFLAGS	+= -D$(S32V_BOARD_SETUP)
 LDFLAGS	+= -lpthread
 OBJ	:= test_rc.o
 EXE	:= test_rc
 
+# this one should be last on the include list
 include ../../common.mk
