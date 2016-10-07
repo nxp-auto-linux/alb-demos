@@ -1,4 +1,4 @@
-samples := multicore pcie_shared_mem
+samples := multicore pcie_shared_mem gpio
 #Add above all samples directories
 clean_samples = $(addprefix clean_,$(samples))
 install_samples = $(addprefix install_,$(samples))

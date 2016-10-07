@@ -1,0 +1,61 @@
+Userspace GPIO code samples
+===========================
+
+Contents
+--------
+* About
+* Requirements
+* Compilation and running
+* Credits
+
+
+About
+-----
+This demo is a basic, Linux-based, example of how to use GPIO Sysfs Interface
+for userspace. The 'gpio' application is used to manipulate GPIO pins – sets
+outputs and reads inputs.
+
+It is split into two separate functionalities: generic wrapper over GPIO sysfs
+interface and (gpio_func.c) and a command line interface (gpio_sample.c).
+
+
+Requirements
+------------
+Before running the demo make sure that Linux Kernel is compiled with enabled
+support for GPIO sysfs interface and GPIO driver for S32V234.
+Both options can be enabled from menuconfig menu (make menuconfig) or with
+'bitbake -c menuconfig virtual/kernel' from Yocto build:
+    * Device Drivers -> GPIO Support -> /sys/class/gpio/...
+    * Device Drivers -> GPIO Support -> Memory mapped GPIO drivers ->
+      GPIO driver for S32V234
+
+The schematic of the board might be needed in order to associate GPIO ids
+with pins.
+
+
+Compilation and running
+-------------------------
+To compile the demo, simply run "make" from this folder or from the parent
+folder containing all the demos.
+
+The demo exposes two operations: set and read the value of a GPIO pin.
+Before proceeding to next steps make sure that you identified 2 GPIO pins.
+One of the pins will be configured as input pin and another as output pin.
+The pins must be physically connected using a wire or a jumper.
+
+Let's consider that IPIN is the input pin and OPIN is the output pin.
+
+Launch the demo instances:
+   root@s32v234evb:~# for s in $(seq 1 1 50); do for v in $(seq 0 1 1); do ./gpio OPIN $v; sleep 1;done done
+   root@s32v234evb:~# ./gpio IPIN
+
+The former command exports OPIN, sets its direction to "out" and writes
+0 or 1 for 50 times. The latter command reads and prints each second
+the value of IPIN. The values of IPIN should alternate between 0 and 1
+since the pins are connected.
+
+
+Credits
+-------
+* Copyright © 2016 NXP Semiconductor
+
