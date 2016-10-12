@@ -6,7 +6,7 @@
 
 LDFLAGS		+= -lpthread
 EXE		:= multicore
-DEPS		:= functions.h
+DEPS	:= functions.h
 OBJ		:= multicore.o functions.o
 INSTALLEXTRA	= *.in
 

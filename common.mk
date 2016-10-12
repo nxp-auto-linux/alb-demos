@@ -37,10 +37,31 @@ CFLAGS += --sysroot=$(SYSROOT)
 LDFLAGS += --sysroot=$(SYSROOT)
 endif
 
+ifeq ($(words $(EXE)),1)
+ifeq ($(OBJ_$(EXE)),)
+OBJ_$(EXE) = OBJ
+endif
+else
+
+
+# initalizing OBJ
+OBJ :=
+
+define objadd
+# when multiple EXE files exist, there must be multiple OBJ_*
+OBJ += $$(OBJ_$(1))
+# creating dep rules for each exe in $(EXE)
+$(1): $$(OBJ_$(1))
+endef
+
+$(foreach exe,$(EXE),$(eval $(call objadd,$(exe))))
+
+endif
+
 all: $(EXE)
 
-$(EXE): $(OBJ)
-	$(CC) -o $(EXE) $^ $(LDFLAGS)
+$(EXE): $($(OBJ_$(EXE)))
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 # Convenience rule to make individual objects
 %.o: %.c $(DEPS)
