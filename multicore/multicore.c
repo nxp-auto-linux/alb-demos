@@ -15,124 +15,160 @@
 #include <errno.h>
 #include "functions.h"
 
-#define LOOP_NUMBER 1923 
 #define MAX_SIZE 20
 #define PATH_MAX 100
+#define RED  "\x1B[31m"
+#define RESET "\x1B[0m"
 
-int core_thread1, core_thread2, core_thread3, core_thread4, core_thread5;
+#define SYSTEM_CPU_ONLINE	"/sys/devices/system/cpu/online"
+#define SYSTEM_CPU_OFFLINE	"/sys/devices/system/cpu/offline"
 
-int size;
-int matrix[MAX_SIZE][MAX_SIZE], matrix1[MAX_SIZE][MAX_SIZE], 
-	matrix2[MAX_SIZE][MAX_SIZE], matrix3[MAX_SIZE][MAX_SIZE], 
-	matrix4[MAX_SIZE][MAX_SIZE], matrix5[MAX_SIZE][MAX_SIZE];
+#define READ		"r"
+#define WRITE		"w"
+#define ERROR		-1
 
-
-int main(){
-	int k, count;
+int main(int argc, char *argv[])
+{
+	int count, loop_no = atoi(argv[1]);
+	char str[MAX_SIZE];
 	struct timeval start, end;
-	long unsigned time_without_threads, time_with_threads;
+	long long unsigned time_without_threads, time_with_threads;
+	FILE *cpu_available = NULL;
+
+	if (argc != 2) {
+		fprintf(stderr, "Usage:\n"
+			"%s loop_number\n\n"
+			"For more details see the readme file!\n\n", argv[0]);
+		exit(1);
+	}
 
 	pthread_t thread1, thread2, thread3, thread4, thread5;
-	struct parameter thread1_args, thread2_args, thread3_args, thread4_args, thread5_args;
+	struct parameter thread1_args, thread2_args, thread3_args, thread4_args,
+	    thread5_args;
 
-	
 	cpu_set_t set;
-	if(sched_getaffinity(0,sizeof(set), &set)==0){
-		#ifdef CPU_COUNT
-			count = CPU_COUNT(&set);
-		#else
-			size_t i;
-			count = 0;
-			for(i = 0; i < CPU_COUNT; i++)
-				if(CPU_ISSET(i, &set))
-					count++;
-		#endif
+	if (sched_getaffinity(0, sizeof(set), &set) == 0) {
+#ifdef CPU_COUNT
+		count = CPU_COUNT(&set);
+#else
+		size_t i;
+		count = 0;
+		for (i = 0; i < CPU_COUNT; i++)
+			if (CPU_ISSET(i, &set))
+				count++;
+#endif
 	}
+
 	printf("\nThe number of cores: %d", count);
+	printf("\nThe online cores : \n");
 
-
-
-	
-	printf("\nThe online cores : ");
-	printf("\n");
-	system("cat /sys/devices/system/cpu/online");
-
-	printf("The offline cores : ");
-	printf("\n");
-	system("cat /sys/devices/system/cpu/offline");
-
-	gettimeofday(&start, NULL);//start timestamp
-
-	make_matrix("matrix1.in", thread1_args.matrix1);
-	thread1_args.id_thread = 1;
-	thread1_args.size = size;
-	make_matrix("matrix2.in", thread2_args.matrix2);
-	thread2_args.id_thread = 2;
-	thread2_args.size = size;
-	make_matrix("matrix3.in", thread3_args.matrix3);
-	thread3_args.id_thread = 0;
-	thread3_args.size = size;
-	make_matrix("matrix4.in", thread4_args.matrix4);
-	thread4_args.id_thread = 4;
-	thread4_args.size = size;
-	make_matrix("matrix5.in", thread5_args.matrix5);
-	thread5_args.id_thread = 3;
-	thread5_args.size = size;
-
-	for(k=0; k<LOOP_NUMBER; k++){
-		multi_matrix(matrix1, thread1_args.size);
-		multi_matrix(matrix2, thread2_args.size);
-		multi_matrix(matrix3, thread3_args.size);
-		multi_matrix(matrix4, thread4_args.size);
-		multi_matrix(matrix5, thread5_args.size);
+	/* Open for reading the online cores */
+	cpu_available = fopen(SYSTEM_CPU_ONLINE, READ);
+	if (!cpu_available) {
+		printf("Failed to open `" SYSTEM_CPU_ONLINE "`\n");
+		return ERROR;
 	}
-			
-	gettimeofday(&end, NULL);//end timestamp
-	/*
+	if (fgets(str, MAX_SIZE, cpu_available) != NULL)
+		puts(str);
+	fclose(cpu_available);
+
+	printf("The offline cores : \n");
+
+	/* Open for writing the online cores */
+	cpu_available = fopen(SYSTEM_CPU_OFFLINE, READ);
+	if (!cpu_available) {
+		printf("Failed to open `" SYSTEM_CPU_OFFLINE "`\n");
+		return ERROR;
+	}
+	if (fgets(str, MAX_SIZE, cpu_available) != NULL)
+		puts(str);
+	fclose(cpu_available);
+
+	if (make_matrix("matrix1.in", thread1_args.matrix, &thread1_args.size)
+	    != 0)
+		printf("Could not read from matrix1.in files!");
+	thread1_args.id_thread = 1;
+	thread1_args.loop_no = loop_no;
+	if (make_matrix("matrix2.in", thread2_args.matrix, &thread2_args.size)
+	    != 0)
+		printf("Could not read from matrix2.in files!");
+	thread2_args.id_thread = 2;
+	thread2_args.loop_no = loop_no;
+	if (make_matrix("matrix3.in", thread3_args.matrix, &thread3_args.size)
+	    != 0)
+		printf("Could not read from matrix3.in files!");
+	thread3_args.id_thread = 0;
+	thread3_args.loop_no = loop_no;
+	if (make_matrix("matrix4.in", thread4_args.matrix, &thread4_args.size)
+	    != 0)
+		printf("Could not read from matrix4.in files!");
+	thread4_args.id_thread = 4;
+	thread4_args.loop_no = loop_no;
+	if (make_matrix("matrix5.in", thread5_args.matrix, &thread5_args.size)
+	    != 0)
+		printf("Could not read from matrix5.in files!");
+	thread5_args.id_thread = 3;
+	thread5_args.loop_no = loop_no;
+
+	/* start timestamp */
+	gettimeofday(&start, NULL);
+
+	multi_matrix(thread1_args.matrix, thread1_args.size,
+		     thread1_args.loop_no);
+	multi_matrix(thread2_args.matrix, thread2_args.size,
+		     thread2_args.loop_no);
+	multi_matrix(thread3_args.matrix, thread3_args.size,
+		     thread3_args.loop_no);
+	multi_matrix(thread4_args.matrix, thread4_args.size,
+		     thread4_args.loop_no);
+	multi_matrix(thread5_args.matrix, thread5_args.size,
+		     thread5_args.loop_no);
+
+	/* end timestamp */
+	gettimeofday(&end, NULL);
+
+	/**
 	 * We make the difference between
 	 * the end timestamp and the start timestamp
-	 */ 
-	time_without_threads = end.tv_usec - start.tv_usec;	
-
-	/* 
-	 * This isn't black magic! 
-	 * It displays some red content into the linux console
 	 */
-	printf("\nWithout threads:\033[1;31m- - - > %lums\n\033[0m\n", time_without_threads); 
+	time_without_threads = (end.tv_sec - start.tv_sec) * 1000 +
+	    (end.tv_usec - start.tv_usec) / 1000;
 
-	/*
-	 * Threads implementation
-	 */
-	gettimeofday(&start, NULL);//start timestamp
+	/* It displays some red content into the linux console */
+	printf(RED "\nWithout threads- - - > %llums\n", time_without_threads);
+	printf(RESET);
 
-	if (pthread_create(&thread1, NULL, &thread_multi_matrix, &thread1_args)){
-		perror("pthread_create");
-		exit(1);
-	}
-			
- 	if (pthread_create(&thread2, NULL, &thread_multi_matrix, &thread2_args)){
-		perror("pthread_create");
-		exit(1);
-	}
+	/* Threads implementation */
 
-	if (pthread_create(&thread3, NULL, &thread_multi_matrix, &thread3_args)){
+	/* start timestamp */
+	gettimeofday(&start, NULL);
+
+	if (pthread_create(&thread1, NULL, &thread_multi_matrix, &thread1_args)) {
 		perror("pthread_create");
 		exit(1);
 	}
 
-	if (pthread_create(&thread4, NULL, &thread_multi_matrix, &thread4_args)){
+	if (pthread_create(&thread2, NULL, &thread_multi_matrix, &thread2_args)) {
 		perror("pthread_create");
 		exit(1);
 	}
 
-	if (pthread_create(&thread5, NULL, &thread_multi_matrix, &thread5_args)){
+	if (pthread_create(&thread3, NULL, &thread_multi_matrix, &thread3_args)) {
 		perror("pthread_create");
 		exit(1);
 	}
 
-	/*
-	 * We'll join all threads in order to finish our purpose
-	 */
+	if (pthread_create(&thread4, NULL, &thread_multi_matrix, &thread4_args)) {
+		perror("pthread_create");
+		exit(1);
+	}
+
+	if (pthread_create(&thread5, NULL, &thread_multi_matrix, &thread5_args)) {
+		perror("pthread_create");
+		exit(1);
+	}
+
+	/* We'll join all threads in order to finish our purpose */
 	if (pthread_join(thread1, NULL))
 		perror("pthread_join");
 
@@ -141,18 +177,21 @@ int main(){
 
 	if (pthread_join(thread3, NULL))
 		perror("pthread_join");
-	
+
 	if (pthread_join(thread4, NULL))
 		perror("pthread_join");
 
 	if (pthread_join(thread5, NULL))
 		perror("pthread_join");
 
-	gettimeofday(&end, NULL);//end timestamp
-	
-	time_with_threads = end.tv_usec - start.tv_usec;
+	/* end timestamp */
+	gettimeofday(&end, NULL);
 
-	printf("\nWith threads: \033[1;31m - - - > %lums\n\033[0m\n", time_with_threads);
+	time_with_threads = (end.tv_sec - start.tv_sec) * 1000 +
+	    (end.tv_usec - start.tv_usec) / 1000;
+
+	printf(RED "\nWith threads- - - > %llums\n\n", time_with_threads);
+	printf(RESET);
 
 	return 0;
 }
