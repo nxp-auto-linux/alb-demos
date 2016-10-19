@@ -104,13 +104,14 @@ index 0c9756a..f3d0986 100644
 ---------------
 
 	. Shared memory must be reserved at boot-time:
-		- On the LS2080A edit the 'setbootargs' u-boot environment
-		  variable by appending 'mem=13568M';
-		- On the S32V234-PCIE edit the 'mmcargs' u-boot environment
-		  variable as follows:
+		- On both the S32V234-EVB and the S32V234-PCIE edit the 'mmcargs'
+		  u-boot environment variable as follows:
 		  $setenv mmcargs setenv bootargs \
 		  	console=${console},${baudrate} root=${mmcroot} mem=255M
 		  then save the environment: '$ saveenv'
+	  NOTE: Even if the BSP User Manual recommends using "mem=511M", the
+	  hardcoded values in the demos are for 255M, so this README recommends
+	  this value in order for the demos to work out-of-the-box.
 	. The S32V234-PCIE EP demo uses debugfs, so it has to be mounted
 	  once Linux has booted up:
 	  # mount -t debugfs none /sys/kernel/debug
