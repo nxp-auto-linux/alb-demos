@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 
 	serv_addr.sin_family = AF_INET;
 
-	memcpy(server->h_addr, &serv_addr.sin_addr.s_addr, server->h_length);
+	memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
 
 	serv_addr.sin_port = htons(port_no);
 	ret = connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
