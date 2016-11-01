@@ -27,26 +27,40 @@
 #define WRITE		"w"
 #define ERROR		-1
 
+static void usage()
+{
+	fprintf(stderr, "\nUsage:\n"
+		"./multicore loop_number\n\n"
+		"For more details see the readme file!\n\n");
+}
+
 int main(int argc, char *argv[])
 {
-	int count, loop_no = atoi(argv[1]);
+	int count;
+	unsigned long loop_no;
+	char *temp;
 	char str[MAX_SIZE];
 	struct timeval start, end;
 	long long unsigned time_without_threads, time_with_threads;
 	FILE *cpu_available = NULL;
-
-	if (argc != 2) {
-		fprintf(stderr, "Usage:\n"
-			"%s loop_number\n\n"
-			"For more details see the readme file!\n\n", argv[0]);
-		exit(1);
-	}
-
 	pthread_t thread1, thread2, thread3, thread4, thread5;
 	struct parameter thread1_args, thread2_args, thread3_args, thread4_args,
 	    thread5_args;
-
 	cpu_set_t set;
+
+	if (argc != 2) {
+		usage();
+		exit(1);
+	}
+
+	/* Get loop number from argv. */
+	loop_no = strtoul(argv[1], &temp, 10);
+	if (loop_no == 0 || *temp != '\0') {
+		usage();
+		exit(1);
+	}
+	printf("\nloop_number = %lu\n", loop_no);
+
 	if (sched_getaffinity(0, sizeof(set), &set) == 0) {
 #ifdef CPU_COUNT
 		count = CPU_COUNT(&set);

@@ -5,9 +5,9 @@ structures. To push this case to the limits, we simultaneously
 take five different bidimensional arrays from five different
 files in order to multiply them several times.
 
-The loop number is given as an argument for this sample. For
-example you can run ./multicore 1000000 and the array will be
-multiplied by 1000000 times.
+The loop number is an non-zero unsigned long. For example you can
+run ./multicore 1000000 and the array will be multiplied by 1000000
+times.
 
 Firstly, we process things in sequence and we put two timestamps
 at the beginning and at the end of this process in order to
