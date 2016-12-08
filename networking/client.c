@@ -12,122 +12,146 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define SIZE 512
+#include "utils.h"
+
+#define SIZE 64
 #define RED  "\x1B[31m"
 #define YEL  "\x1B[33m"
 #define RESET "\x1B[0m"
 
-static void client_communication(int sock)
+#define QUIT_CMD "quit"
+
+static int client_communication(int sock, char **line, size_t *line_len)
 {
-	int n, bytes_written, buff_len;
-	char buff[SIZE];
+	int n, len;
 
-	while (1) {
-		printf(RED "Client: " RESET);
-		/* Reading from the standard input. */
-		if (fgets(buff, SIZE, stdin) == NULL) {
-			printf("Error reading from stdin!");
-			exit(1);
-		}
+	printf(RED "Client: " RESET);
 
-		/* Sending data to the server. */
-		buff_len = strlen(buff);
-		bytes_written = 0;
-		while (bytes_written < buff_len) {
-			n = write(sock, buff + bytes_written,
-					buff_len - bytes_written);
-			if (n < 0)
-				perror("Error writing to socket!");
-			else
-				bytes_written += n;
-		}
-
-		/* Reading from the socket. */
-		n = read(sock, buff, SIZE - 1);
-		if (n == 0) {
-			printf("Server closed the connection\n");
-			return;
-		}
-		if (n < 0)
-			perror("Error reading from socket!");
-
-		buff[n] = '\0';
-		printf(YEL "Server: %s%s", RESET, buff);
+	/* Reading from the standard input. */
+	len = getline(line, line_len, stdin);
+	if (len < 0) {
+		printf("Error reading from stdin!");
+		return -1;
 	}
+
+	/* Empty line */
+	if (len == 1)
+		return 0;
+
+	/* Remove endline. */
+	(*line)[len - 1] = '\0';
+
+	/* Check for quit command. */
+	if (strcmp(*line, QUIT_CMD) == 0)
+		return -1;
+
+	/* Don't send more than SIZE characters */
+	if (len >= SIZE) {
+		(*line)[SIZE - 1] = '\0';
+		len = SIZE;
+	}
+
+	/* Sending data to the server. */
+	n = wwrite(sock, *line, len);
+	if (n < 0) {
+		perror("Error writing to socket!");
+		return -1;
+	}
+
+	/* Reading from the socket. */
+	n = read(sock, *line, SIZE);
+	if (n == 0) {
+		printf("Server closed the connection\n");
+		return -1;
+	}
+
+	if (n < 0) {
+		perror("read");
+		return -1;
+	}
+
+	(*line)[n] = '\0';
+	printf(YEL "Server: " RESET "%s\n", *line);
+	return 0;
 }
 
-static void usage()
+static void usage(char *executable_name)
 {
-	fprintf(stderr, "Usage:\n\
-		./client server_ip port_no\n\n\
-		For more details see the readme file!\n\n");
+	fprintf(stderr, "Usage: %s server_ip port_no\n"
+			"For more details see the readme file!\n",
+			executable_name);
 
 }
 
 int main(int argc, char *argv[])
 {
-
-	int sock, port_no, ret;
+	int sock, ret;
 	struct sockaddr_in serv_addr;
-	struct hostent *server;
+	struct addrinfo hints, *res;
+	char *temp;
+	unsigned int port_no;
+	char *line = NULL;
+	size_t line_len = SIZE;
 
-	/*
-	 * Make a validation depending on the number of arguments
-	 * and explain to the user the meaning of those arguments
-	 */
+	/* Make a validation depending on the number of arguments */
 	if (argc < 3) {
-		usage();
-		exit(1);
+		usage(argv[0]);
+		return -EINVAL;
 	}
 
-	/*
-	 * Convert port number to an integer value
-	 */
-	if (sscanf(argv[2], "%u", &port_no) <= 0) {
-		usage();
-		exit(1);
+	/* Convert port number to an integer value */
+	port_no = strtoul(argv[2], &temp, 0);
+	if (port_no == 0 || *temp != '\0') {
+		usage(argv[0]);
+		return -EINVAL;
 	}
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags |= AI_CANONNAME;
+
+	ret = getaddrinfo(argv[1], NULL, &hints, &res);
+	if (ret != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(ret));
+		return -EINVAL;
+	}
+
+	serv_addr = *((struct sockaddr_in *)res->ai_addr);
+	freeaddrinfo(res);
 
 	/*
 	 * Create an endpoint for communication
 	 */
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock < 0) {
-		perror("Couldn't open the socket!");
-		exit(1);
+		perror("socket");
+		return -errno;
 	}
-
-	/*
-	 *  The gethostbyname() function returns a structure
-	 * of type hostent for the given host name. Here 'name'
-	 * is either a hostname, or an IPv4 address in standard
-	 * dot notation
-	 *  For more details about this function, please check
-	 * into the Linux Programmer's Manual --
-	 * https://www.cl.cam.ac.uk/cgi-bin/manpage?3+gethostbyname
-	 */
-	server = gethostbyname(argv[1]);
-
-	if (server == NULL) {
-		fprintf(stderr, "Invalid host!\n");
-		exit(1);
-	}
-
-	memset(&serv_addr, '\0', sizeof(serv_addr));
-
-	serv_addr.sin_family = AF_INET;
-
-	memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
 
 	serv_addr.sin_port = htons(port_no);
 	ret = connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
-	if ( ret < 0) {
-		perror("The connection has been refused!");
-		exit(1);
+	if (ret < 0) {
+		perror("connect");
+		ret = -errno;
+		goto close_socket;
 	}
 
-	client_communication(sock);
+	line = malloc(sizeof(*line) * line_len);
+	if (!line) {
+		ret = -ENOMEM;
+		fprintf(stderr, "Out of memory !\n");
+		goto close_socket;
+	}
 
+	ret = EXIT_SUCCESS;
+	while (!client_communication(sock, &line, &line_len));
+
+	if (line)
+		free(line);
+
+close_socket:
+	/* Free used resources */
 	close(sock);
-	return 0;
+	return ret;
 }

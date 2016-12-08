@@ -3,126 +3,129 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
-
 #include <netinet/in.h>
-#include <sys/select.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
 
-#define SIZE 512
+#include "utils.h"
+
+#define SIZE 64
 #define RED  "\x1B[31m"
 #define YEL  "\x1B[33m"
 #define RESET "\x1B[0m"
 
 #define PENDING_CONNECTIONS	1
 
-static void server_communication(int new_sock)
+static int server_communication(int client_sock, char **line, size_t *line_len)
 {
-	int n, bytes_written, buff_len;
-	char buff[SIZE];
+	int n, len;
 
-	while (1) {
-		/*
-		 * Reading data from the socket
-		 */
-		n = read(new_sock, buff, SIZE - 1);
-		if (n == 0) {
-			printf("Client closed the connection\n");
-			return;
-		}
-		if (n < 0)
-			perror("Error reading from socket");
-		buff[n] = '\0';
+	/*
+	 * Reading data from the socket
+	 */
+	n = read(client_sock, *line, SIZE);
+	if (n == 0) {
+		printf("Client closed the connection\n");
+		return -1;
+	}
+	if (n < 0) {
+		perror("read");
+		return -errno;
+	}
 
-		printf(RED "Client: %s%s", RESET, buff);
+	(*line)[n] = '\0';
+
+	printf(RED "Client: %s%s\n", RESET, *line);
+
+	do {
 		printf(YEL "Server: " RESET);
 
-		/*
-		 * Reading from the standard input
-		 */
-		if (fgets(buff, SIZE, stdin) == NULL) {
+		/* Reading from the standard input. */
+		len = getline(line, line_len, stdin);
+		if (len < 0) {
 			printf("Error reading from stdin!");
-			exit(1);
+			return -1;
 		}
-		/*
-		 * Sending data to the client
-		 */
-		buff_len = strlen(buff);
-		bytes_written = 0;
-		while (bytes_written < buff_len) {
-			n = write(new_sock, buff + bytes_written,
-					buff_len - bytes_written);
-			if (n < 0)
-				perror("Error writing to socket!");
-			else
-				bytes_written += n;
-		}
+
+	} while (len == 1);
+
+	/* Remove endline. */
+	(*line)[len - 1] = '\0';
+
+	/* Don't send more than SIZE characters */
+	if (len >= SIZE) {
+		(*line)[SIZE - 1] = '\0';
+		len = SIZE;
 	}
+
+	/*
+	 * Sending data to the client
+	 */
+	n = wwrite(client_sock, *line, len);
+	if (n < 0) {
+		perror("write!");
+		return -1;
+	}
+
+	return 0;
 }
 
-static void usage()
+static void usage(char *executable_name)
 {
-	fprintf(stderr, "Usage:\n\
-		./server port_no\n\n\
-		For more details see the readme file!\n\n");
+	fprintf(stderr, "Usage:	%s port_no\n"
+		"For more details see the readme file!\n",
+		executable_name);
 }
 
 int main(int argc, char *argv[])
 {
-	int new_sock, sock, port_no;
-	struct sockaddr_in server;
+	int client_sock, sock, port_no;
+	char *temp;
+	int ret = EXIT_SUCCESS;
+	char *line = NULL;
+	size_t line_len = SIZE;
 
-	/*
-	 * Validating the number of arguments
-	 */
+	/* Validating the number of arguments */
 	if (argc < 2) {
-		usage();
-		exit(1);
+		usage(argv[0]);
+		return -EINVAL;
 	}
 
-	/*
-	 * Convert port number to an integer value
-	 */
-	if (sscanf(argv[1], "%u", &port_no) <= 0) {
-		usage();
-		exit(1);
+	/* Convert port number to an integer value */
+	port_no = strtoul(argv[1], &temp, 0);
+	if (port_no == 0 || *temp != '\0') {
+		usage(argv[0]);
+		return -EINVAL;
 	}
 
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0) {
-		perror("Error opening socket!");
-		exit(1);
+	sock = create_listen_sock(port_no);
+	if (sock < 0)
+		return -errno;
+
+	client_sock = accept(sock, NULL, NULL);
+	if (client_sock < 0) {
+		perror("accept");
+		goto close_socket;
 	}
 
-	memset(&server, '\0', sizeof(server));
-
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons(port_no);
-
-	if (bind(sock, (struct sockaddr *) &server, sizeof(server)) < 0) {
-		perror("Error on binding");
-		exit(1);
+	line = malloc(sizeof(*line) * line_len);
+	if (!line) {
+		ret = -ENOMEM;
+		fprintf(stderr, "Out of memory !\n");
+		goto close_socket;
 	}
 
-	if (listen(sock, PENDING_CONNECTIONS) != 0) {
-		perror("Error on listening the socket!");
-		exit(1);
-	}
+	while (!server_communication(client_sock, &line, &line_len));
 
-	new_sock = accept(sock, NULL, NULL);
+	if (line)
+		free(line);
 
-	if (new_sock < 0) {
-		perror("Error on accept!");
-		exit(1);
-	}
-
-	server_communication(new_sock);
-
-	close(new_sock);
+	/* Free used resources */
+	close(client_sock);
+close_socket:
 	close(sock);
-	return 0;
+	return ret;
 }

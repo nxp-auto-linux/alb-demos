@@ -1,34 +1,50 @@
-The networking sample  will simulate a TCP server-client chat. The connection
-will be established through sockets and the communication is basically a
-stop-and-wait sequence: both server and client wait for a response after sending
-a message.
+The networking sample will simulate a TCP server-client and a TCP
+server-multiclient communication.The connection will be established through sockets.
+
+The server-client example is basically a stop-and-wait sequence: both server and client
+wait for a response after sending a message.
+
+The server-multiclient example shows how more the one client can connect to the same
+server. Clients send messages read from stdin and server replies with an ack for the
+received message. Handling input from more than one client is implemented using poll.
+
+Build:
+ * make server - builds the single-client server
+ * make server_multiclient - builds the multi-clientserver
+ * make client - builds the client
+ * make - builds all above
 
 Execution flow:
+ * Server (single-client/multi-client) receives as argument the port number.
+ * Client needs two arguments:
+	- the IP address of the machine where the server is running.
+	- the port number used by the server for listening for new connections.
 
-	*	From the server compilation will result an executable file that
-	receives as parameter the port.
-	*	In order to find the server(if it is available), the client should
-	know the name or its IP address. There are two arguments that
-	should be specified at the execution, the IP address and the number
-	of the port that the socket will use.
-	*	Practically, after the "make"/"make server"/"make client" command,
-	we must turn on the server and give it a number for the	port. For example,
-	if we want to use the port with the number 1923, the right command will
-	be "./server 1923"
-	*	Once the server is turned on, the client can connect to it. Assuming
-	that the IP address of the server is 192.168.0.1, the client will connect
-	with the command "./client 192.168.0.1 1923". After that, the client can
-	start the conversation.
+ The client reads data from stdin until end-of-line is received and sends it to
+ the choosen server. Next, it waits for a reply from server which will be printed
+ to stdout. This message exchange is interrupted when "quit" is read frm stdin.
+
+ The single-client server (server executable) can communicate with only one client.
+ It also reads data from stdin and sends it to the client, after a message from the
+ former is received.
+
+ The multi-client server (server_multiclient executable) can communicate with more
+ than one client. It waits for messages from any of the connected clients and sends
+ back an acknowledgement.
 
 Example:
 	* Start server using port 1923:
 		./server 1923
+		      or
+		./server_multiclient 1923
 	* Start client on the same host:
 		./client 127.0.0.1 1923
 
 
+------------------------------------server-client----------------------------------------------
+
 ------------                                           ------------
--          -     (Connection created with success)      -          -
+-          -     (Connection created with success)      -         -
 -  Client  - <---------------------------------------> -  Server  -
 -          -                                           -          -
 ------------                     |                     ------------
@@ -55,3 +71,33 @@ Example:
 
       X                                                        X
 (Close connection)                                     (Close connection)
+
+
+
+-------------------------------------server-multiclient-----------------------------------------
+
+						------------
+						   while(1)
+				   X <-----------  Server  - <-------------------
+									  |	 		|
+									  |			|
+------------						  |	- poll()	 		|
+-          -    					  |  		- accept_client()	|
+- Client 1 -  <-----------------------|					- communicate()		|
+-          -  						  |					|
+------------						  |	          			|
+------------						  |		  			|
+-          -     				          |		  			|
+- Client 2 -  <-----------------------|	 				  			|
+-          -   						  |					|
+------------						  |			 		|
+									  	 		|
+	  .								  			|
+	  .								  			|
+	  .								  			|
+	  								  			|
+------------						  |					|
+-          -					      |					 	|
+- Client n -  <-----------------------|_________________________|
+-          -
+------------
