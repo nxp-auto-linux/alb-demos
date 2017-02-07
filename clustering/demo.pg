@@ -1,0 +1,32 @@
+# Copyright 2017 NXP
+#!/usr/bin/gnuplot
+
+reset
+set terminal png
+
+set ylabel "Image Complete ( % )"
+set yrange [0:100]
+
+set xlabel "Processing Time (seconds)"
+set xrange [0:12]
+
+set title "OpenMPI demo multiprocessing"
+#set key reverse Left outside
+set key reverse Left inside bottom
+set grid
+
+set style data linespoints
+
+# show only the most recent 5 runs of each run
+list1 = system('ls -tr demo_1*board* | tail -5')
+list2 = system('ls -tr demo_2*board* | tail -5')
+list3 = system('ls -tr demo_3*board* | tail -5')
+
+set style line 1 lt 1 lw 1 pt 3 linecolor rgb "red"
+set style line 2 lt 1 lw 1 pt 3 linecolor rgb "blue"
+set style line 3 lt 1 lw 1 pt 3 linecolor rgb "green"
+
+i = 0
+plot for [f in list1] i = i + 1 f using 1:2 w l ls 1 smooth unique title "Run " .f , \
+                for [f in list2] i = i + 1 f using 1:2 w l ls 2 smooth unique title "Run " .f, \
+                for [f in list3] i = i + 1 f using 1:2 w l ls 3 smooth unique title "Run " .f
