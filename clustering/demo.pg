@@ -10,7 +10,7 @@ set yrange [0:100]
 set xlabel "Processing Time (seconds)"
 set xrange [0:12]
 
-set title "OpenMPI demo multiprocessing"
+set title "MPI Demo"
 #set key reverse Left outside
 set key reverse Left inside bottom
 set grid
