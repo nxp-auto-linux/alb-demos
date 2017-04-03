@@ -56,6 +56,7 @@ class c_master : i_process{
 private:
 
     int collisions = 0;
+    int* collisions_per_slave;
     std::thread job;
 
     Semaphore sem;

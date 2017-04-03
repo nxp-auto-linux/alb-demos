@@ -4,6 +4,8 @@
 #include <string>
 #include <functional>
 
+#define collisions_limit 5
+
 ThreadData::ThreadData(Semaphore *_sem, c_master_puzzle* _puzzle):
     sem(_sem), is_running(true), next_progress(0), puzzle(_puzzle)
 {
@@ -48,6 +50,9 @@ c_master::c_master(int rank,c_master_puzzle* puzzle)
     nb_boards = (world_size-1)/4 +1;
     this->puzzle = puzzle;
     init_connections();
+    collisions_per_slave = new int[world_size-1];
+    for(int i=0; i<world_size-1;i++)
+	collisions_per_slave[i]=0;
 }
 
 c_master::~c_master()
@@ -140,6 +145,9 @@ void c_master::read_result(int i){
     int result = connections[i].slot_a();
     if(puzzle->blk_is_used(result)){
 	
+        collisions_per_slave[i]++;
+	if(collisions_per_slave[i] < collisions_limit){
+
         collisions++;
 
         int blk_above_id = puzzle->find_block_above(who_solves_what[i]);
@@ -155,9 +163,11 @@ void c_master::read_result(int i){
         connections[i].set_status(STATUS_BUSY);
         connections[i].receive();
         return;
+	}
     }
     puzzle->final_solution[who_solves_what[i]] = result;
     puzzle->blocks_solved++;
+    collisions_per_slave[i] = 0;
 }
 
 void c_master::give_work(int i){
