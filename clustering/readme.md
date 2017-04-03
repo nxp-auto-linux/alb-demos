@@ -10,7 +10,7 @@ One or two addidtional s32v234 boards, which will be called "slaves". All s32v23
 via Ethernet cable, so a switch will be required.
 
 ## Software requirements
-**1.** The MPICH2 implementation of the OpenMPI protocol, found here: http://www.mpich.org/. Install with: 
+**1.** The MPICH2 implementation of the MPI protocol, found here: http://www.mpich.org/. Install with: 
     
     ./configure --prefix=/usr/local --disable-fortran; 
     make; 
@@ -126,6 +126,8 @@ files.
 **3.** Using scp, send the "*mpi_demo*", "*input.ppm*" and "*input.ppm.small*" to every slave
 
 **4.** Execute run_mpi_demo.sh. You should see the graph on the monitor.
+
+NOTE: Problems in performance or scalability may appear if the SD card used has a low read/write speed.
 
 More info about using MPI can be found here: http://mpitutorial.com/tutorials/
 
