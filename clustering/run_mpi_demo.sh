@@ -63,10 +63,10 @@ function iter_set_up()
 
 		if check_host "root@${host}"; then
 			echo "*** Host $host is alive ***"
-			LIVE_HOSTS+=($host)
+			LIVE_HOSTS+=${host}
 			# Update the _hosts file
 			echo \# `date` >> ${MPI_HOSTS_FILE}
-			echo $host >> ${MPI_HOSTS_FILE}
+			echo ${host} >> ${MPI_HOSTS_FILE}
 		else
 			echo "--- Host $host is not alive ---"
 		fi
@@ -99,7 +99,17 @@ function mpi_command()
 	local __np=$1
 	local __ifile=$2
 	local __size=$3
-	MPI_CMD="time mpiexec -np ${__np} -f _hosts -wdir /home/root ./mpi_demo ${__ifile} ${__size}"
+	local __hosts=""
+
+	for host in ${LIVE_HOSTS[@]}; do
+		if [ "${host}" == "$MPI_MASTER" ]; then
+			__hosts+=${host}
+		else
+			__hosts+=,${host}
+		fi
+	done
+	
+	MPI_CMD="time mpiexec -n ${__np} -host ${__hosts} -wdir /home/root ./mpi_demo ${__ifile} ${__size}"
 }
 
 ################################################################################
