@@ -44,8 +44,6 @@ unsigned int c_block::compare_with_above(c_block* blk_above, unsigned int curren
     for(int i=0; i<edge_length; i++){
         manhattan_distance_on_edge += 
         rgb::manhattan_distance(this->top +i,blk_above->bottom + edge_length -i -1);
-        if (manhattan_distance_on_edge > current_min_dist)
-            return UINT_MAX;
     }
 
     return manhattan_distance_on_edge;
@@ -57,8 +55,6 @@ unsigned int c_block::compare_with_leftside(c_block* blk_left, unsigned int curr
     for(int i=0; i<edge_length; i++){
         manhattan_distance_on_edge += 
         rgb::manhattan_distance(blk_left->right +i,this->left + edge_length -i -1);
-        if (manhattan_distance_on_edge > current_min_dist)
-            return UINT_MAX;
     }
 
     return manhattan_distance_on_edge;
