@@ -121,7 +121,7 @@ files.
 
 **1.** Make sure the above requirements have been met.
 
-**2.** On master run the build.sh script to build the application
+**2.** On master run `make` to build the application
 
 **3.** Using scp, send the "*mpi_demo*", "*input.ppm*" and "*input.ppm.small*" to every slave
 
