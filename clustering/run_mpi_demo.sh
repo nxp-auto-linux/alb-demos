@@ -63,7 +63,7 @@ function iter_set_up()
 
 		if check_host "root@${host}"; then
 			echo "*** Host $host is alive ***"
-			LIVE_HOSTS+=${host}
+			LIVE_HOSTS+=(${host})
 			# Update the _hosts file
 			echo \# `date` >> ${MPI_HOSTS_FILE}
 			echo ${host} >> ${MPI_HOSTS_FILE}
