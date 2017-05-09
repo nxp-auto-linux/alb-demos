@@ -1,0 +1,611 @@
+/*
+ * Copyright 2017 NXP
+ *
+ * SPDX-License-Identifier: GPL-2.0+
+ * 
+ * EndPoint code (S32V234 PCIE/BBMINI)
+ */
+
+//---------------------------------------------------------------------------
+// Included headers
+//---------------------------------------------------------------------------
+
+#include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
+#include <time.h>
+#include <signal.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <pthread.h>
+#include <sys/mman.h>
+#include <netinet/in.h>
+#include <poll.h>
+#include <net/if.h>
+#include <linux/if_tun.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <arpa/inet.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <termios.h>
+#include <linux/serial.h>
+#include <ctype.h>
+#include "../net_rc/netComm.h"
+#include "../common/pcie_ops.h"
+
+//------------------------------------------------------------------------------
+// Macros & Constants
+//------------------------------------------------------------------------------
+// #define ENABLE_DMA
+//#define ENABLE_DUMP
+//#define LOG_VERBOSE
+
+/// Poll mask for input
+const int POLL_INPUT  = (POLLIN | POLLPRI);
+/// Poll mask for error
+const int POLL_ERROR  = (POLLERR | POLLHUP | POLLNVAL);
+
+/// Number of files in poll array
+#define POSIX_IF_CNT 1
+/// TAP file index for poll
+#define POSIX_IF_TAP 0
+
+#define CMD1_PATTERN	0x12
+#define CMD3_PATTERN	0x67
+#define CMD8_PATTERN	CMD1_PATTERN
+
+#ifdef LOG_VERBOSE
+#define LOG printf
+#else
+#define LOG(...)
+#endif
+
+#define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
+
+/* FIXME remove hardcoding of addresses */
+#define S32V_PCIE_BASE_ADDR	0x72000000
+
+#ifndef EP_LOCAL_DDR_ADDR
+
+/* Use 0x8FF00000 (end of RAM) and boot with 'mem=255M'
+       0xc1000000 and boot with 'memmap=1M$0xc1000000'
+ */
+#define EP_LOCAL_DDR_ADDR	0x8FF00000
+#endif
+
+/* The RC's shared DDR mapping is different in the Bluebox / BlueBox Mini vs EVB case.
+ * For the moment, this setting is statically defined.
+ * For Bluebox / Bluebox Mini: use 0x83A0000000 (end of RAM) and boot with 'mem=14848M'
+ *                             use 0x8080000000 and boot with 'memmap=1M$0x8080000000'
+ * For S32V234 EVB: use 0x8FF00000 (end of RAM) and boot with 'mem=255M'
+ *                  use 0xc1000000 and boot with 'memmap=1M$0xc1000000'
+ */
+#ifndef RC_DDR_ADDR
+#if (defined(PCIE_SHMEM_BLUEBOX) || defined(PCIE_SHMEM_BLUEBOXMINI))	/* LS2-S32V */
+#define RC_DDR_ADDR		0x83A0000000
+#else						/* EVB-PCIE */
+#define RC_DDR_ADDR		0x8FF00000
+#endif
+#endif
+
+/* Outbound region structure */
+struct s32v_outbound_region outb1 = {
+    RC_DDR_ADDR,  	  /* target_addr */
+    S32V_PCIE_BASE_ADDR,    /* base_addr */
+    MESSBUF_LONG, 	  /* size >= 64K(min for PCIE on S32V) */
+    0,			  /* region number */
+    0			  /* region type = mem */
+};
+
+struct s32v_inbound_region inb1 = {
+    2,			  /* BAR2 */
+    EP_LOCAL_DDR_ADDR,    /* locally-mapped DDR on EP (target addr) */
+    0			  /* region 0 */
+};
+
+//------------------------------------------------------------------------------
+// Type definitions
+//------------------------------------------------------------------------------
+
+#ifdef ENABLE_DUMP
+/// dump format selection
+typedef enum {
+  dumpHexOnly,
+  dumpHexAscii
+} tDumpFormat;
+#endif
+
+struct test_write_args {
+	uint32_t count;
+	void *dst;
+	void *src;
+	ssize_t size;
+};
+
+/**
+ * @brief Print llc-net usage information
+ *
+ */
+static void PrintUsage(void)
+{
+  fprintf(stderr, "Usage: net_ep [OPTION...]\n"
+          "\n"
+          "  -h                 Print this help output\n"
+          "  -i <ifacename>     Name of interface to use (mandatory)\n"
+          "\n");
+}
+
+#ifdef ENABLE_DMA
+volatile sig_atomic_t dma_flag = 0;
+volatile sig_atomic_t cntSignalHandler = 0;
+struct sigaction action;
+
+/**
+ * @brief signal_handler for DMA transfer end
+ * @param signum - received signal, only handles SIGUSR1
+ **/
+void signal_handler(int signum)
+{
+  if (signum == SIGUSR1) {
+    printf ("\n DMA transfer completed");
+    dma_flag = 1;
+    cntSignalHandler++;
+  }
+  return;
+}
+
+void dmaCpy(unsigned int *dst, unsigned int *src, int len, int fd1)
+{
+  /* Struct for DMA ioctl */
+  struct dma_data_elem dma_single = {0, 0, 0, 0, 0, 0};
+  
+  dma_single.flags  = 0;
+  dma_flag          = 0;
+  dma_single.size   = len;
+  dma_single.sar    = (unsigned long int) src;
+  dma_single.dar    = (unsigned long int) dst;
+  dma_single.ch_num = 0;
+  dma_single.flags  = (DMA_FLAG_WRITE_ELEM | DMA_FLAG_EN_DONE_INT | DMA_FLAG_LIE);
+
+  ioctl(fd1, SEND_SINGLE_DMA, &dma_single);
+  while (!dma_flag) { ; }
+}
+#endif
+
+/**
+ * @brief cread: read routine that checks for errors and exits
+ *         if an error is returned.
+ * @param fd   - tap interface file descriptor
+ * @param buf  - start of buffer pointer
+ * @param n    - maximum space in buffer
+ * @return number of bytes read
+ **/
+int cread(int fd, uint8_t *buf, int n){
+
+  int nread;
+
+  if((nread=read(fd, buf, n)) < 0){
+    perror("Reading data");
+    exit(1);
+  }
+  return nread;
+}
+
+/**
+ * @brief cwrite: write routine that checks for errors and exits
+ *         if an error is returned.
+ * @param fd  - tap interface file descriptor
+ * @param buf - start of buffer pointer
+ * @param n   - number of bytes to be written
+ * @return number of bytes written
+ **/
+int cwrite(int fd, uint8_t *buf, int n){
+
+  int nwrite;
+
+  if ((nwrite=write(fd, buf, n)) < 0) {
+    perror("Writing data");
+    exit(1);
+  }
+  return nwrite;
+}
+
+/**
+ * @brief tun_alloc: allocates or reconnects to a tun/tap device.
+ *        The caller must reserve enough space in *dev.
+ * @param dev   - name of the device to be created
+ * @param flags - should include IFF_TAP
+ * @returns int file pointer of opened device
+ */
+int tun_alloc(char *dev, int flags) {
+
+  struct ifreq ifr;
+  int fd, err;
+  char *clonedev = "/dev/net/tun";
+
+  if( (fd = open(clonedev , O_RDWR)) < 0 ) {
+    perror("Opening /dev/net/tun");
+    return fd;
+  }
+
+  memset(&ifr, 0, sizeof(ifr));
+
+  ifr.ifr_flags = flags;
+
+  if (*dev) {
+    strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+  }
+
+  if( (err = ioctl(fd, TUNSETIFF, (void *)&ifr)) < 0 ) {
+    perror("ioctl(TUNSETIFF)");
+    close(fd);
+    return err;
+  }
+
+  strcpy(dev, ifr.ifr_name);
+
+  return fd;
+}
+
+#ifdef ENABLE_DUMP
+/**
+ * @brief dump data to output at debug level D_INFO
+ * @param data  points to start of buffer which is to be dumped to output
+ * @param len   number of bytes to be dumped
+ * @param header dump header
+ * @param dForm  dump format [dumpHexOnly|dumpHexAscii]
+ *
+ */
+void dump_data(uint8_t *data, size_t len, char *header, tDumpFormat dForm)
+{
+    size_t index = 0;
+
+    if (len > 0) {
+        printf("%s", header);
+        while (index < len) {
+            size_t byte;
+            char buffer[16];
+            char line[81] = { 0 };
+
+            /* Address */
+            sprintf(buffer, "data[0x%.4x]: ", (unsigned int) index);
+            strcat(line, buffer);
+
+            /* Bytes in HEX */
+            byte = 0;
+            while (byte < 16) {
+                if ((index + byte) < len) {
+                    sprintf(buffer, " %.2x", (data[index + byte] & 0xFF));
+                    strcat(line, buffer);
+                } else
+                    strcat(line, "   ");
+                byte++;
+            }
+
+            if (dForm == dumpHexAscii) {
+                /* Separator */
+                strcat(line, "  ");
+
+                /* Bytes in ASCII */
+                byte = 0;
+                while ((byte < 16) && ((index + byte) < len)) {
+                    if ((data[index + byte] >= ' ')
+                            && (data[index + byte] <= '~')) {
+                        sprintf(buffer, "%c", (data[index + byte] & 0xFF));
+                        strcat(line, buffer);
+                    } else
+                        strcat(line, ".");
+                    byte++;
+                }
+            }
+            /* Line ending */
+            printf("%s\n", line);
+            line[0] = 0;
+            /* Next line */
+            index += 16;
+        }
+    }
+}
+#endif
+
+/**
+ * @brief receive payload message, by checking receive counter, FLAGS and a MAGIC_HEADER
+ * @param buf      - uint8_t pointer to start of payload buffer
+ * @param src_buff - unsigned int pointer to start of transfer buffer
+ * @param mapPCIe  - unsigned int pointer to start of receive memory
+ * @param fd1      - int file pointer to PCIe driver
+ * @return         - number of bytes payload to be received
+ *                    -1 if no date is received
+ */
+static int receive_msg_ls2(uint8_t *buf, unsigned int *src_buff, unsigned int *mapPCIe, int fd1)
+{
+  static unsigned int RecCount = 0;
+  unsigned int pCount, tmp, len;
+  
+  len = -1;
+  memcpy((unsigned int *)&src_buff[MESSBUF_SIZE/4],
+         (unsigned int *)&mapPCIe[MESSBUF_SIZE/4], 4);
+  tmp	 = src_buff[MESSBUF_SIZE/4];
+  pCount = tmp & 0xFFFF;
+  if (tmp & ACK_FLAG) {
+    // sync counter
+    RecCount = (pCount + 1) & 0xFFFF;
+  }
+  // check if new packet arrived
+  memcpy((unsigned int *)(src_buff),
+         (unsigned int *)(mapPCIe), 4);
+  
+  if (*src_buff == (RecCount + DONE_FLAG)) {
+    // we have data :)
+#ifndef ENABLE_DMA
+    memcpy((unsigned int *)(src_buff), (unsigned int *)(mapPCIe), MESSBUF_SIZE);
+#else
+    dmaCpy((unsigned int *)(src_buff), (unsigned int *)(mapPCIe), MESSBUF_SIZE, fd1);
+#endif     
+    if (memcmp(&(src_buff[1]), MAGIC_HEADER, 4) == 0) {
+      // the packet type we expect
+      len = src_buff[2];		  // get length of payload
+      memcpy(buf, &(src_buff[4]), len);  // copy payload
+    }
+    // acknowledge packet and transferr to LS2
+    src_buff[MESSBUF_SIZE/4] = RecCount + ACK_FLAG;
+    memcpy((unsigned int *)&mapPCIe[MESSBUF_SIZE/4],
+           (unsigned int *)&src_buff[MESSBUF_SIZE/4], 4);
+    
+  } else {
+     LOG("Message %x (%x)\n",  *src_buff, RecCount);
+     usleep(100); 
+  }
+  return len;
+}
+
+/**
+ * @brief send payload message, by adding send counter, FLAGS and a MAGIC_HEADER
+ * @param buf       - uint8_t pointer to start of payload buffer
+ * @param len       - number of bytes payload to be send
+ * @param dest_buff - unsigned_int pointer to start of transfer buffer
+ * @param mapPCIe   - unsigned int pointer to start of send memory
+ * @param fd1       - int file pointer to PCIe driver
+ */
+static void send_msg_ls2(uint8_t *buf, int len, unsigned int *dest_buff, unsigned int *mapPCIe, int fd1)
+{
+  static unsigned int SendCount = 0;
+  int gotit;
+  
+  if (len > 0) {
+    if (len > BUFSIZE) {
+      // should never happen !!!
+      fprintf(stderr, "send_msg: len > %d\n", BUFSIZE);
+      len = BUFSIZE; // just clip
+    }
+    // make sure a previous count ACK is available
+    dest_buff[MESSBUF_SIZE/4] = ((SendCount - 1) & 0xFFFF) + ACK_FLAG; 
+    memcpy((unsigned int *)&mapPCIe[MESSBUF_SIZE/4],
+    	   (unsigned int *)&dest_buff[MESSBUF_SIZE/4], 4);
+    *dest_buff = (unsigned int) START_FLAG;  // write start flag 0x20000
+    memcpy(&(dest_buff[1]), MAGIC_HEADER, 4);
+    memcpy(&(dest_buff[2]), &len, 4);
+    memcpy(&(dest_buff[4]), buf, len); // move payload to safe location in buffer
+    dest_buff[(MESSBUF_SIZE - 4)/4] = SendCount + DONE_FLAG;
+    // transfer data to LS2
+#ifndef ENABLE_DMA
+    memcpy((unsigned int *)mapPCIe, (unsigned int *) dest_buff, MESSBUF_SIZE + 8);
+#else
+    dmaCpy((unsigned int *)mapPCIe, (unsigned int *) dest_buff, MESSBUF_FULL, fd1);
+#endif
+    LOG("Send to %lx\n", (long unsigned int) mapPCIe);
+    // wait until date is read by LS2
+    gotit = 0;
+    while (!gotit) {
+       memcpy((unsigned int *)&dest_buff[MESSBUF_SIZE/4],
+              (unsigned int *)&mapPCIe[MESSBUF_SIZE/4], 4);
+       if (dest_buff[MESSBUF_SIZE/4] == (SendCount + ACK_FLAG)) {
+    	 gotit = 1;
+       } else {
+         LOG("Got %x (%x)\n", dest_buff[MESSBUF_SIZE/4], SendCount);
+    	 usleep(100);
+       }
+    }
+    SendCount = (SendCount + 1) & 0xFFFF;   // prevent flag overwrite 
+  }
+}
+
+/**
+ * @brief network through PCIe shared memory
+ * @param Argc   command line argument count
+ * @param ppArgv command line parameter list
+ *
+ */
+int main (int Argc, char **ppArgv)
+{
+  int           fd1 = NULL, fd2 = NULL, tapFd;
+  int           flags = IFF_TAP;
+  int           ret = 0;
+  unsigned int  *mapDDR  = NULL;
+  unsigned int  *mapPCIe = NULL;
+  unsigned int  *src_buff;
+  unsigned int  *dest_buff;
+  int           goon, rlen;
+  pid_t         pidf;
+  int           C;
+  struct pollfd FDs[POSIX_IF_CNT] = { {-1, } };
+  char		if_name[IFNAMSIZ] = "tun1";
+  uint8_t       buffer[BUFSIZE];
+
+  // parse command line options using getopt() for POSIX compatibility
+  while ((C = getopt(Argc, ppArgv, "+h?i:")) != -1)
+  {
+    switch (C)
+    {
+      case 'h':
+        PrintUsage();
+        exit(0);
+        break;
+
+      case 'i':
+	strncpy(if_name, optarg, IFNAMSIZ-1);
+	break;
+
+      case '?':
+        if (isprint(optopt))
+          fprintf(stderr, "Unknown option '-%c'\n", optopt);
+        else
+          fprintf(stderr, "Unknown option character `\\x%x'\n", optopt);
+        exit(1);
+
+      default:
+        break;
+    }
+  }
+  if (*if_name == '\0') {
+	  perror("Must specify interface name!");
+	  PrintUsage();
+  }
+  /* initialize tun interface */
+  if ( (tapFd = tun_alloc(if_name, flags | IFF_NO_PI)) < 0 ) {
+	  fprintf(stderr, "Error connecting to tun interface %s!\n", if_name);
+	  exit(1);
+  }
+  FDs[POSIX_IF_TAP].fd     = tapFd;
+  FDs[POSIX_IF_TAP].events = POLL_INPUT;
+
+  printf("Successfully connected to network interface %s\n", if_name );
+  
+#ifdef ENABLE_DMA
+  memset(&action, 0, sizeof (action));	/* clean variable */
+  action.sa_handler = signal_handler;	/* specify signal handler */
+  action.sa_flags = SA_NODEFER;		/* do not block SIGUSR1 within sig_handler_int */
+  sigaction(SIGUSR1, &action, NULL);	/* attach action with SIGIO */
+#endif
+  src_buff  = (unsigned int *)malloc(MAP_DDR_SIZE);
+  dest_buff = (unsigned int *)malloc(MAP_DDR_SIZE);
+
+  fd1 = open(EP_DBGFS_FILE, O_RDWR);
+  if (fd1 < 0) {
+  	  perror("Error while opening debug file");
+  	  goto err;
+  } else {
+  	  printf("Ep debug file opened successfully\n");
+  }
+
+  fd2 = open("/dev/mem", O_RDWR);
+  if (fd2 < 0) {
+  	  perror("Error while opening /dev/mem file");
+  	  goto err;
+  } else {
+  	  printf("Mem opened successfully\n");
+  }
+
+  /* MAP DDR free 1M area. This was reserved at boot time */
+  mapDDR = mmap(NULL, MAP_DDR_SIZE,
+  		  PROT_READ | PROT_WRITE,
+  		  MAP_SHARED, fd2, EP_LOCAL_DDR_ADDR);
+  printf(" EP_LOCAL_DDR_ADDR = %x, mapDDR = %lx\n",
+  	  EP_LOCAL_DDR_ADDR, (long unsigned int) mapDDR);
+  if (!mapDDR) {
+  	  perror("/dev/mem DDR area mapping FAILED");
+  	  goto err;
+  } else {
+  	  printf("/dev/mem DDR area mapping OK\n");
+  }
+
+  /* Map PCIe area */
+  mapPCIe = mmap(NULL, MAP_DDR_SIZE,
+  		  PROT_READ | PROT_WRITE,
+  		  MAP_SHARED, fd2, S32V_PCIE_BASE_ADDR);
+  printf(" S32V_PCIE_BASE_ADDR = %x, mapPCIe = %lx\n",
+  	 S32V_PCIE_BASE_ADDR, (long unsigned int) mapPCIe);
+  if (!mapPCIe) {
+  	  perror("/dev/mem PCIe area mapping FAILED");
+  	  goto err;
+  } else {
+  	  printf("/dev/mem PCIe area mapping OK\n");
+  }
+
+  /* Setup outbound window for accessing RC mem */
+  ret = ioctl(fd1, SETUP_OUTBOUND, &outb1);
+  if (ret < 0) {
+  	  perror("Error while setting outbound1 region");
+  	  goto err;
+  } else {
+  	  printf("Outbound1 region setup successfully\n");
+  }
+
+  /* Same thing for inbound window for transactions from RC */
+  ret = ioctl(fd1, SETUP_INBOUND, &inb1);
+  if (ret < 0) {
+  	  perror("Error while setting inbound1 region");
+  	  goto err;
+  } else {
+  	  printf("Inbound1 region setup successfully\n");
+  }
+  memset(src_buff, 8, MESSBUF_LONG);
+  memcpy((unsigned int *) mapPCIe, (unsigned int *) src_buff, MESSBUF_LONG);
+  printf("RecBase %lx\n", (long unsigned int) &mapPCIe[REC_BASE/4]);
+  
+  pidf = fork();
+  if (pidf == 0) {
+    // child process
+    goon = 1;
+    //Cnt  = 0;
+    while (goon) {
+      rlen = receive_msg_ls2(buffer, dest_buff, mapPCIe, fd1);
+      if (rlen > 0) {
+    	// data received from LS2
+    	int nwrite;
+    	
+#ifdef ENABLE_DUMP
+    	dump_data(buffer, rlen, "To TAP interface\n", dumpHexOnly);
+#endif
+    	
+    	nwrite = cwrite(tapFd, buffer, rlen);
+    	if (nwrite != rlen) {
+    	  fprintf(stderr, "Not all data written to TAP\n");
+    	}
+#ifdef ENABLE_DUMP
+    	printf("Done\n");
+#endif
+      }
+    }
+  } else if (pidf > 0) {
+    // parent process
+    goon = 1;
+    //Cnt  = 0;
+    while (goon) {
+      // Wait for an event on the MKx file descriptor
+      // poll() returns >0 if descriptor is readable, 0 if timeout, -1 if error
+      int Data = poll(FDs, POSIX_IF_CNT, 200);
+      if (Data < 0) {	  // Error
+    	fprintf(stderr, "Poll error %d '%s'\n", errno, strerror(errno));
+    	goon = 0;
+      } 
+      if (Data > 0) {
+    	if (FDs[POSIX_IF_TAP].revents & POLL_INPUT) {
+    	  int nread;
+
+    	  nread = cread(tapFd, buffer, BUFSIZE);
+#ifdef ENABLE_DUMP
+    	  dump_data(buffer, nread, "From TAP interface\n", dumpHexOnly);
+#endif
+    	  // sent to LS2
+    	  send_msg_ls2(buffer, nread, src_buff, &mapPCIe[REC_BASE/4], fd1); // data copied in transmitt buffer
+#ifdef ENABLE_DUMP
+    	  printf("Done\n");
+#endif
+    	}
+      }
+    }
+  } else {
+     fprintf(stderr, "Fork failed, stopping program\n");
+  }
+err :
+  if (fd1) close(fd1);
+  if (fd2) close(fd2);
+  exit(0);
+}

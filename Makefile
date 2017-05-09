@@ -1,4 +1,10 @@
-samples := multicore pcie_shared_mem gpio networking
+#
+# Copyright 2016-2017 NXP
+#
+# SPDX-License-Identifier:     GPL-2.0+
+#
+
+samples := multicore pcie_shared_mem gpio networking pcie_virt_eth
 #Add above all samples directories
 clean_samples = $(addprefix clean_,$(samples))
 install_samples = $(addprefix install_,$(samples))

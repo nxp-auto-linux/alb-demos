@@ -1,0 +1,301 @@
+PCIe Virtual Ethernet Example
+=============================
+
+Contents
+--------
+* About
+* Quick start on BlueBox Mini
+* Platforms
+* Configuration and running
+* Applications description
+* Known limitations
+* Credits
+* Todo list
+
+
+About
+-----
+This demo is a basic, Linux-based, example of a pair of applications sharing
+a buffer in each other's memory and enabling communication over a pair of virtual
+ethernet interfaces (tuns) over PCIe.
+The two tun interfaces then can be configured (ifconfig) like any ethernet 
+interface.
+The demo can run in two different setups:
+	. In a "NXP Bluebox";
+	. In a S32V234 EVB-PCIE configuration.
+
+
+Quick start on BlueBox Mini
+---------------------------
+Here are in short the basic steps that need to be performed on BlueBox mini to 
+build and run the virtual ethernet demo:
+
+1. Build
+From current folder on host (pcie_virt_eth):
+S32V: # make apps=net_ep ARCH=arm64 CROSS_COMPILE=<path_to_linaro_toolchain_for_s32v>/aarch64-linux-gnu-
+LS2:  # make apps=net_rc ARCH=arm64 CROSS_COMPILE=<path_to_linaro_toolchain_for_ls2>/aarch64-linux-gnu-
+2. Copy executables to target filesystem (mmc or nfs):
+- copy ./pcie_virt_eth/net_ep/net_ep to S32V rootfs
+- copy ./pcie_virt_eth/net_rc/net_rc to LS2 rootfs
+NOTE: if rootfs is readonly (e.g. a kernel itb image is used), then the appropriate binary can be copied 
+to the target rootfs with scp after Linux boot (step 5.)
+3. Prepare to boot S32V and LS2 in uboot
+S32V:
+=> setenv mmcargs $mmcargs mem=255M
+=> saveenv
+LS2:
+=> setenv setbootargs $setbootargs mem=14848M
+=> saveenv
+4. Boot Linux on S32V and then LS2.
+5. Create and configure virtual ethernet
+S32V: net_ep -i tun1&
+LS2: net_rc -i tun1&
+After that, run:
+S32V: ifconfig tun1 192.168.1.1 up
+LS2: ifconfig tun1 192.168.1.2 up
+6. Test virtual ethernet - ping should work
+S32V:
+ping -I 192.168.1.1 192.168.1.2
+or on LS2:
+ping -I 192.168.1.2 192.168.1.1
+	
+Platforms
+---------
+The demo consists of two applications, one running as PCIe Root Complex (RC)
+and one running as PCIe Endpoint (EP). The stated assumption is that both
+of them will run on Linux.
+
+Although the requirements for the RC application are not tied to a specific
+hardware platform, the demos have been tested in the following 
+configurations:
+	. "NXP Bluebox", with the LS2085A running as RC and the S32V234-PCIE
+	  running as EP;
+	. "NXP Bluebox Mini", with the LS2084A running as RC and the S32V234-PCIE
+	  running as EP;
+	. S32V234-EVB + S32V234-PCIE, with the EVB running as RC and the PCIE
+	  running as EP.
+
+For the time being, all values (addresses, sizes) necessary for
+shared memory communication are hard-coded, so the configuration selection is
+made at compile-time - see the "Configuration and running" section of this
+document.
+
+
+Prerequisites
+-------------
+Before compiling and running the demos, the following prerequisites are
+assumed depending on the chosen configuration:
+
+A) In the "NXP Bluebox/Bluebox Mini" setups
+	. Linux and u-boot images for LS208xA (RC) from the QorIQ-SDK-V2.0-20160527-yocto 
+		BSP with meta-bluebox layer installed on top of it;
+	. Linux image for S32V234-PCIE (Bluebox EP) / S32V234-BBMINI (BlueBox Mini EP)
+		built from the QorIQ-SDK-V2.0-20160527-yocto BSP with meta-bluebox layer
+		installed on top of it; by default, the latest meta-bluebox layer 
+		configures the S32V234-PCIE / S32V234-BBMINI PCIe driver as EP
+	. Shared memory must be reserved at boot-time:
+		- On the LS208xA edit the 'setbootargs' u-boot environment
+		  variable and append 'mem=14848M':
+		  => setenv setbootargs $setbootargs mem=14848M
+		- On the S32V234-PCIE edit the 'mmcargs' u-boot environment
+		  variable and append 'mem=255M' (assuming booting is done from MMC card):
+		  => setenv mmcargs $mmcargs mem=255M
+	. The S32V234 EP demo uses debugfs, so it has to be mounted once Linux has booted up:
+	  # mount -t debugfs none /sys/kernel/debug
+
+B) In the EVB-PCIE setup
+	. U-boot and Linux images for S32V234-PCIE (EP) and S32V234-EVB (RC)
+		built from the Auto Linux BSP as per the User Manual;
+		- NOTE: While the kernel image for the S32V234-PCIE running as EP
+		  must have the PCIe driver configured as EP (CONFIG_PCI_S32V234_EP config option 
+		  enabled), the image for the S32V234-EVB (RC) must _not_ have that option enabled; 
+		- Please also refer to the Auto Linux BSP User Manual, chapter
+		"Setting Up the PCIe EP Mode".
+	. Shared memory must be reserved at boot-time:
+		- On both the S32V234 PCIE and EVB edit the 'mmcargs' u-boot environment
+		  variable and append 'mem=255M' (assuming booting is done from MMC card):
+		  => setenv mmcargs $mmcargs mem=255M
+	. The S32V234-PCIE EP demo uses debugfs, so it has to be mounted once Linux has booted up:
+	  # mount -t debugfs none /sys/kernel/debug
+
+
+Configuration and running
+-------------------------
+To compile both demos, run "make" from the sample folder (pcie_virt_eth).
+To compile only one demo, please run "make apps=net_ep" or "make apps=net_rc".
+
+NOTE: 
+- you must have the following variables set:
+ARCH=arm64
+CROSS_COMPILE set for your cross-compiler (e.g. "<PATH_TO_TOOLCHAIN>/aarch64-linux-gnu-"
+for the Linaro toolchain).
+
+To manually select the current setup (NXP Bluebox, BlueBox Mini or S32V234 EVB + PCIE),
+pass the "S32V_BOARD_SETUP=<chosen_setup>" argument on the make command-line or directly
+in file pcie_virt_eth/pcie_shmem_common.mk, where "chosen_setup" can be either PCIE_SHMEM_BLUEBOX,
+PCIE_SHMEM_BLUEBOXMINI (default) or PCIE_SHMEM_EVB.
+If S32V_BOARD_SETUP is omitted altogether, PCIE_SHMEM_BLUEBOXMINI is selected by default.
+
+Two separate executables will be generated, one for the EP (pcie_virt_eth/net_ep/net_ep), one for the
+RC (pcie_virt_eth/net_rc/net_rc).
+
+
+Applications description
+------------------------
+Each of the two applications sets up a shared buffer (reserved at boot-time)
+that the peer application can read from or write to via PCIe. The local CPUs
+are also able to access the local buffers.
+After that, it creates a tun interface and connects it to the corresponding PCIe node.
+All the data comming from the network stack via this tun interface is sent to
+the PCIe link; all the data comminf from the PCIe link is sent to the tun interface.
+The PCIe connection between the EP and RC behaves just like an ethernet connection.
+
+The command line is:
+# net_ep -i <iface>
+# net_rc -i <iface>
+
+where <iface> is the name of the tun interface to be created on each side (default is "tun1").
+After the tun interfaces are created, you may assign ipv4 addresses (same sub-net) to them
+(e.g. "ifconfig <iface> 192.168.xx.yy up").
+
+NOTE: the tun interfaces must be configured (e.g. by using ifconfig) only AFTER both
+ends of the tun conection have been created.
+
+Regarding the PCIe setup, the following addresses are employed in the two applications:
+  a) In the RC application
+	. EP_BAR2_ADDR - This is the address of the BAR2 PCIe register of the
+	  S32V234 PCIE / BBMINI (EP) board as seen from the Linux instance running on RC.
+	  In the current setup, the EP configures BAR2 as 1M 32-bit
+	  non-prefetchable memory.
+	  The RC accesses the EP's shared buffer by locally mapping EP_BAR2_ADDR
+	  and writing at the mapped address. The transaction is then translated
+	  on EP side via an inbound window.
+
+	  This address can be obtained from the Linux terminal by looking at the
+	  output of the "lspci -v" command, for the device with ID 4001.
+	  
+	  E.g., for BlueBox Mini:
+	  
+	0003:01:00.0 Processor [0b80]: Freescale Semiconductor Inc Device 4001 (rev 01)
+	    Flags: bus master, fast devsel, latency 0, IRQ 215
+	    [virtual] Memory at 3840000000 (32-bit, non-prefetchable) [size=1M]
+	--> [virtual] Memory at 3840100000 (32-bit, non-prefetchable) [size=1M]
+	    [virtual] Memory at 3840211000 (32-bit, non-prefetchable) [size=256]
+	    [virtual] Memory at 3840210000 (32-bit, non-prefetchable) [size=4K]
+	    [virtual] Memory at 3840200000 (32-bit, non-prefetchable) [size=64K]
+	    Capabilities: [40] Power Management version 3
+	    Capabilities: [50] MSI: Enable+ Count=1/1 Maskable+ 64bit+
+	    Capabilities: [70] Express Endpoint, MSI 00
+	    Capabilities: [100] Advanced Error Reporting
+
+	  The relevant output from the command is in the second "[virtual] Memory" line:
+	  [virtual] Memory at 3840100000 (32-bit, non-prefetchable) [size=1M]
+	  which displays the EP BAR2 physical address as seen on the RC side.
+
+	  NOTE: The "lspci" command from the Busybox shell does not support the
+	  "-v" or "-vv" flags; if the hardware setup does not match the
+	  addresses currently hard-coded in the demos sources, one would have to
+	  install the pciutils package in the rootfs in order to determine the
+	  correct values.
+
+	. RC_DDR_ADDR - This is the physical address of the local buffer
+	  reserved at boot time for PCIe sharing. The buffer is 1M in size.
+	  The buffer is expectedly placed at the end of the physical memory and
+	  its address can be obtained from the Linux command-line via the
+	  command "cat /proc/iomem" and inspecting the System RAM field, from
+	  the output which is expectedly of the following form:
+
+	    root@ls2084abbmini:~# cat /proc/iomem
+	    02000000-0200ffff : /i2c@2000000
+	    02140000-0214ffff : mmc0
+	    ........
+	    80c1c0000-80c1c003f : mc_portal
+	--> 8080100000-839fffffff : System RAM
+
+	  In this example, the reserved buffer will be placed at 0x83A0000000 on LS2 RC.
+
+ b) In the EP application
+ 	. S32V_PCIE_BASE_ADDR - This is the base address of the PCIe config
+	  space. The address is defined in the S32V234 Reference Manual.
+	. EP_LOCAL_DDR_ADDR - This is the physical address of the local buffer
+	  reserved at boot time for PCIe sharing. The buffer is 1M in size.
+	  The buffer is expectedly placed at the end of the physical memory and
+	  its address can be obtained via the same method as RC_DDR_ADDR in the
+	  RC demo (see above), using command "cat /proc/iomem":
+	  
+	    root@s32v234bbmini:~# cat /proc/iomem
+	    40002000-40003fff : /soc/aips-bus@40000000/dma-controller@40002000
+	    4000a000-4000afff : /soc/aips-bus@40000000/swt@4000A000
+	    ........
+	    72ffc000-72ffffff : dbi
+	--> 80000000-8fefffff : System RAM
+	      80080000-806ee553 : Kernel code
+	      80727000-807d3fff : Kernel data
+	    c0000000-c0ffffff : 40028000.dcu
+
+	  In this example, the reserved buffer will be placed at 0x8ff00000 on S32V EP.
+	  
+	. RC_DDR_ADDR - This is the physical address of the remote buffer,
+	  residing in RC physical mem, which the peer RC will share over PCIe.
+	  Its value must necessarily be the same as "RC_DDR_ADDR" from the RC
+	  application setup (see above).
+
+The PCIe EP application sets up inbound and outbound translation windows
+for transactions coming from / going to the RC. It does so via ioctls provided
+by the PCIe-EP driver compiled in the Linux kernel.
+After that, the application opens a tun interface (by default named "tun1") and connects
+it to the PCIe node.
+
+Full output of the setup should look like this:
+
+root@s32v234bbmini:~# ./net_ep -i tun1&
+[1] 1298
+Successfully connected to network interface tun1
+Ep debug file opened successfully
+Mem opened successfully
+ EP_LOCAL_DDR_ADDR = 8ff00000, mapDDR = 7f9e246000
+/dev/mem DDR area mapping OK
+ S32V_PCIE_BASE_ADDR = 72000000, mapPCIe = 7f9e146000
+/dev/mem PCIe area mapping OK
+Outbound1 region setup successfully
+Inbound1 region setup successfully
+RecBase 7f9e147000
+root@s32v234bbmini:~# ifconfig tun1 192.168.2.1 up 
+
+root@ls2084abbmini:~# ./net_rc -i tun1&
+[1] 2856
+Successfully connected to network interface tun1
+ /dev/mem file opened successfully
+ EP_BAR2_ADDR = 3840100000, mapPCIe = ffff83844000
+ /dev/mem PCIe area mapping  OK
+ RC_DDR_ADDR = 83a0000000, mapDDR = ffff83744000
+ /dev/mem DDR area mapping OK
+root@ls2084abbmini:~# ifconfig tun1 192.168.2.2 up
+root@ls2084abbmini:~# ping -I 192.168.2.2 192.168.2.1
+PING 192.168.2.1 (192.168.2.1) from 192.168.2.2 : 56(84) bytes of data.
+64 bytes from 192.168.2.1: icmp_seq=1 ttl=64 time=0.619 ms
+64 bytes from 192.168.2.1: icmp_seq=2 ttl=64 time=0.314 ms
+
+Known limitations
+-----------------
+. Base addresses are hard-coded in both the RC and the EP applications
+. The demos are subject to the e9852 erratum, which restricts the read or write
+  transactions from the RC to the S32V EP (S32v234 v1.0 only, which may apply to
+  the BlueBox setups and S32V234 PCIE-EVB setups with v1.0 chips).
+  Therefore, when using BlueBox or S32V234 PCIE-EVB setups, the following variable
+  must be set in u-boot: "setenv ignoreERR009852 1", and also in the kernel the 
+  corresponding config option must be selected (under "Freescale S32V234 PCIe EP",
+  enable "Ignore Freescale S32V234 erratum ERR009852"). For BlueBox Mini and
+  S32V234 PCIE-EVB with v1.1 chips, this is not necessary.
+. PCIe hotplug is not currently supported. Consequently, in the S32V EVB-PCIE
+  setup, one will have to boot the PCIE (EP) board first and the EVB (RC) second
+  in order for the latter to discover the former on the PCIe bus.
+
+
+Credits
+-------
+. © Copyright 2016-2017 NXP
+. The original code of the applications is credited to Han Raaijmakers (han.raaijmakers@nxp.com);
+it was developped starting from a PCIe demo sample application deveopped by 
+Aurelian Floricica (aurelian.floricica@nxp.com) and updated by Bogdan Hamciuc (bogdan.hamciuc@nxp.com)
+
