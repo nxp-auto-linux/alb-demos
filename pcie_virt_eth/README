@@ -50,7 +50,9 @@ LS2:
 5. Create and configure virtual ethernet
 S32V: net_ep -i tun1&
 LS2: net_rc -i tun1&
-After that, run:
+NOTE: the tun interfaces must be configured (e.g. by using ifconfig) only AFTER both
+ends of the tun conection have been created (on both S32V and LS2).
+AFTER creating both interfaces, run:
 S32V: ifconfig tun1 192.168.1.1 up
 LS2: ifconfig tun1 192.168.1.2 up
 6. Test virtual ethernet - ping should work
