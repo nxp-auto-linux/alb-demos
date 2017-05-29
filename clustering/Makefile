@@ -6,7 +6,7 @@
 
 .PHONY: all clean
 
-all: ; mpic++ main.cpp -std=c++0x -o mpi_demo -pthread
+all: ; mpic++ -cxx=g++ main.cpp -std=c++0x -o mpi_demo -pthread
 
 clean: ; rm -rf mpi_demo;
 
