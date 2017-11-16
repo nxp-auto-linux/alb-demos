@@ -22,12 +22,10 @@ interface and (gpio_func.c) and a command line interface (gpio_sample.c).
 Requirements
 ------------
 Before running the demo make sure that Linux Kernel is compiled with enabled
-support for GPIO sysfs interface and GPIO driver for S32V234.
-Both options can be enabled from menuconfig menu (make menuconfig) or with
+support for GPIO sysfs interface.
+The option can be enabled from menuconfig menu (make menuconfig) or with
 'bitbake -c menuconfig virtual/kernel' from Yocto build:
     * Device Drivers -> GPIO Support -> /sys/class/gpio/...
-    * Device Drivers -> GPIO Support -> Memory mapped GPIO drivers ->
-      GPIO driver for S32V234
 
 The schematic of the board might be needed in order to associate GPIO ids
 with pins.
