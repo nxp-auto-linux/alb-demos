@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2016 NXP Semiconductors
+ * Copyright 2016-2017 NXP
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
@@ -14,13 +14,32 @@
 #include <time.h>
 #include <sched.h>
 #include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <libgen.h>
 
-int make_matrix(char path[], int matrix[MAX_SIZE][MAX_SIZE], int *size)
+int make_matrix(char matrix_name[], int matrix[MAX_SIZE][MAX_SIZE], int *size)
 {
 	int i, j;
 	FILE *f;
+	char matrix_path[FILENAME_MAX] = { 0 };
+	char self_path[FILENAME_MAX] = { 0 };
 
-	f = fopen(path, "r+");
+	if (NULL == matrix_name) {
+		printf("Invalid argument\n");
+		return -1;
+	}
+
+	if (0 >= readlink("/proc/self/exe", self_path, FILENAME_MAX)) {
+		printf("Can not get current directory path\n");
+		return -1;
+	}
+
+	strcpy(matrix_path, dirname(self_path));
+	strcat(matrix_path, "/");
+	strcat(matrix_path, matrix_name);
+
+	f = fopen(matrix_path, "r+");
 	if (!f)
 		return -1;
 

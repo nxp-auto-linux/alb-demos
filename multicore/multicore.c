@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 NXP Semiconductors
+ * Copyright 2016-2017 NXP
  *
  * SPDX-License-Identifier:	BSD-3-Clause
  */
@@ -99,28 +99,38 @@ int main(int argc, char *argv[])
 	fclose(cpu_available);
 
 	if (make_matrix("matrix1.in", thread1_args.matrix, &thread1_args.size)
-	    != 0)
+	    != 0) {
 		printf("Could not read from matrix1.in files!");
+		return -1;
+	}
 	thread1_args.id_thread = 1;
 	thread1_args.loop_no = loop_no;
 	if (make_matrix("matrix2.in", thread2_args.matrix, &thread2_args.size)
-	    != 0)
+	    != 0) {
 		printf("Could not read from matrix2.in files!");
+		return -1;
+	}
 	thread2_args.id_thread = 2;
 	thread2_args.loop_no = loop_no;
 	if (make_matrix("matrix3.in", thread3_args.matrix, &thread3_args.size)
-	    != 0)
+	    != 0) {
 		printf("Could not read from matrix3.in files!");
+		return -1;
+	}
 	thread3_args.id_thread = 0;
 	thread3_args.loop_no = loop_no;
 	if (make_matrix("matrix4.in", thread4_args.matrix, &thread4_args.size)
-	    != 0)
+	    != 0) {
 		printf("Could not read from matrix4.in files!");
+		return -1;
+	}
 	thread4_args.id_thread = 4;
 	thread4_args.loop_no = loop_no;
 	if (make_matrix("matrix5.in", thread5_args.matrix, &thread5_args.size)
-	    != 0)
+	    != 0) {
 		printf("Could not read from matrix5.in files!");
+		return -1;
+	}
 	thread5_args.id_thread = 3;
 	thread5_args.loop_no = loop_no;
 
