@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 NXP Semiconductors
+ * Copyright 2016-2018 NXP
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 
 	/* Convert port number to an integer value */
 	port_no = strtoul(argv[1], &temp, 0);
-	if (port_no == 0 || *temp != '\0') {
+	if (strchr(argv[1], '-') != NULL || port_no == 0 || *temp != '\0') {
 		usage(argv[0]);
 		return -EINVAL;
 	}
