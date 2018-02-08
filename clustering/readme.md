@@ -49,7 +49,7 @@ ImageMagick can be found here: http://www.imagemagick.org/script/binary-releases
 
 Note: Both of these might be included in your LinuxBSP version. Try running: 
 
-    which convert.im6
+    which convert.im7
     which gnuplot
 
 **6.** Edit lines 4-8 of run_mpi_demo.sh. 
