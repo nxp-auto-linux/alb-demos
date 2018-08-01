@@ -15,27 +15,13 @@
 #include <pthread.h>
 #include <sys/mman.h>
 
+#include "../../pcie_common/include/pcie_rc_addr.h"
 
 #define CMD1_PATTERN	0x42
 #define CMD3_PATTERN	0xC8
 #define CMD6_PATTERN	CMD1_PATTERN
 
 #define MAP_DDR_SIZE	1024 * 1024 * 1
-
-/* EP_BAR2_ADDR is an address in PCIE mem space.
- * It is the value in the BAR2 register of the device(EP).
- * EP, on its side will match accesses on that address to its DDR.
- *
- * For the moment, this setting is statically defined in the Makefile.
- * FIXME remove hardcoding of addresses */
-#if defined PCIE_SHMEM_BLUEBOX		/* LS2-S32V */
-#define EP_BAR2_ADDR	0x1440100000ll
-/* Physical memory mapped by the RC CPU */
-#define RC_DDR_ADDR	0x8350000000
-#else					/* EVB-PCIE */
-#define EP_BAR2_ADDR	0x72200000ll
-#define RC_DDR_ADDR	0x8FF00000
-#endif
 
 struct test_write_args {
 	uint32_t count;

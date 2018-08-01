@@ -18,7 +18,8 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 
-#include "pcie_ops.h"
+#include "../../pcie_common/include/pcie_ops.h"
+#include "../../pcie_common/include/pcie_ep_addr.h"
 
 #define CMD1_PATTERN	0x12
 #define CMD3_PATTERN	0x67
@@ -27,18 +28,6 @@
 #define MAP_DDR_SIZE	1024 * 1024 * 1
 
 #define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
-
-/* FIXME remove hardcoding of addresses */
-#define S32V_PCIE_BASE_ADDR	0x72000000
-#define S32V_LOCAL_DDR_ADDR	0x8FF00000
-/* The RC's shared DDR mapping is different in the Bluebox vs EVB case.
- * For the moment, this setting is statically defined in the Makefile.
- */
-#if defined PCIE_SHMEM_BLUEBOX			/* LS2-S32V */
-#define RC_DDR_ADDR		0x8350000000
-#else						/* EVB-PCIE */
-#define RC_DDR_ADDR		0x8FF00000
-#endif
 
 volatile sig_atomic_t dma_flag = 0;
 volatile sig_atomic_t cntSignalHandler = 0;
@@ -114,7 +103,7 @@ int main(int argc, char *argv[])
 
 	struct s32v_inbound_region inb1 = {
 		2,		/* BAR2 */
-		S32V_LOCAL_DDR_ADDR,	/* locally-mapped DDR on EP */
+		EP_LOCAL_DDR_ADDR,	/* locally-mapped DDR on EP */
 		0		/* region 0 */
 	};
 start:
@@ -231,7 +220,7 @@ start:
 		/* MAP DDR free 1M area. This was reserved at boot time */
 		mapDDR = mmap(NULL, MAP_DDR_SIZE,
 				PROT_READ | PROT_WRITE,
-				MAP_SHARED, fd2, S32V_LOCAL_DDR_ADDR);
+				MAP_SHARED, fd2, EP_LOCAL_DDR_ADDR);
 		if (!mapDDR) {
 			perror("/dev/mem DDR area mapping FAILED");
 			goto err;
@@ -363,7 +352,7 @@ start:
 		dma_single.flags = 0;
 		dma_flag = 0;
 		dma_single.size = mapsize;
-		dma_single.sar = S32V_LOCAL_DDR_ADDR;
+		dma_single.sar = EP_LOCAL_DDR_ADDR;
 		dma_single.dar = S32V_PCIE_BASE_ADDR;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_WRITE_ELEM | DMA_FLAG_EN_DONE_INT | DMA_FLAG_LIE);
@@ -388,7 +377,7 @@ start:
 		dma_flag = 0;
 		dma_single.size = mapsize;
 		dma_single.sar = S32V_PCIE_BASE_ADDR;
-		dma_single.dar = S32V_LOCAL_DDR_ADDR;
+		dma_single.dar = EP_LOCAL_DDR_ADDR;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_READ_ELEM | DMA_FLAG_EN_DONE_INT  | DMA_FLAG_LIE);
 		

@@ -1,7 +1,7 @@
 #
-# Copyright (C) 2016 NXP Semiconductor
+# Copyright 2016-2018 NXP
 #
-include ../pcie_shmem_common.mk
+include ../../pcie_common/pcie_shmem_common.mk
 
 CFLAGS	+= -D$(S32V_BOARD_SETUP)
 LDFLAGS	+= -lpthread

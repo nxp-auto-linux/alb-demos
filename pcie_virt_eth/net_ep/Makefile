@@ -1,10 +1,10 @@
 #
-# Copyright 2017 NXP
+# Copyright 2017-2018 NXP
 #
 # SPDX-License-Identifier:     GPL-2.0+
 #
 
-include ../pcie_shmem_common.mk
+include ../../pcie_common/pcie_shmem_common.mk
 
 # LDFLAGS	+= -lpthread
 

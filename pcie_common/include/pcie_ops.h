@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2016 NXP Semiconductor
  * This file contains source code from the Linux kernel version 4.1.26, namely
  * drivers/pci/host/pci-s32v234.c, copyright as follows:
  *
- * Copyright (C) 2014-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright (C) 2013 Kosagi
  *              http://www.kosagi.com
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2016-2018 NXP
  *
  * Author: Sean Cross <xobs@kosagi.com>
  *
