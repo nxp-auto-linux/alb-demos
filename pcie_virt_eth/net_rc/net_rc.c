@@ -300,9 +300,9 @@ static int receive_msg(unsigned int *buf, unsigned int *mapDDR)
       if (memcmp((unsigned int *)&(mapDDR[1]), MAGIC_HEADER, 4) == 0) {
         int alignLen;
         // the packet type we expect
-	len = mapDDR[2];                  // get length of payload
-	alignLen = (len + 8) & 0xFFF8;
-	memcpy(buf, (unsigned int *)&(mapDDR[4]), alignLen);  // copy payload
+        len = mapDDR[2];                  // get length of payload
+        alignLen = (len + 8) & 0xFFF8;
+        memcpy(buf, (unsigned int *)&(mapDDR[4]), alignLen);  // copy payload
       }
       // acknowledge packet
       mapDDR[MESSBUF_SIZE/4] = RecCount + ACK_FLAG;
@@ -311,10 +311,8 @@ static int receive_msg(unsigned int *buf, unsigned int *mapDDR)
       LOG("mapDDR %lx, messAddr %lx\n",
                 (long unsigned int) mapDDR,
                 (long unsigned int) &mapDDR[(MESSBUF_SIZE - 4)/4]);
-#ifdef ENABLE_DUMP
-       dump_data((uint8_t *)mapDDR, 16, "mapDDR\n", dumpHexOnly);
-#endif
-       usleep(100);
+
+      usleep(100);
     }
     
     return len;
@@ -486,7 +484,7 @@ int main (int Argc, char **ppArgv)
     	int nwrite;
     	
 #ifdef ENABLE_DUMP
-    	dump_data((uint8_t *)buffer, rlen, "To TAP interface\n", dumpHexOnly);
+    	dump_data((uint8_t *)buffer, rlen, "From PCIe EP to TAP interface\n", dumpHexOnly);
 #endif
     	nwrite = cwrite(tapFd, (uint8_t *)buffer, rlen);
     	if (nwrite != rlen) {
@@ -515,7 +513,7 @@ int main (int Argc, char **ppArgv)
 
     	  nread = cread(tapFd, (uint8_t *)buffer, BUFSIZE);
 #ifdef ENABLE_DUMP
-    	  dump_data((uint8_t *)buffer, nread, "From TAP interface\n", dumpHexOnly);
+    	  dump_data((uint8_t *)buffer, nread, "From TAP interface to EP\n", dumpHexOnly);
 #endif
     	  // sent to S32v
     	  send_msg(buffer, nread, mapDDR); // data copied in transmitt buffer

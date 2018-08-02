@@ -503,7 +503,7 @@ int main (int Argc, char **ppArgv)
   } else {
   	  printf("/dev/mem PCIe area mapping OK\n");
   }
-  printf(" RC_DDR_ADDR = %x\n", RC_DDR_ADDR);
+  printf(" RC_DDR_ADDR = %lx\n", RC_DDR_ADDR);
 
   /* Setup outbound window for accessing RC mem */
   ret = ioctl(fd1, SETUP_OUTBOUND, &outb1);
@@ -538,7 +538,7 @@ int main (int Argc, char **ppArgv)
     	int nwrite;
     	
 #ifdef ENABLE_DUMP
-    	dump_data(buffer, rlen, "To TAP interface\n", dumpHexOnly);
+    	dump_data(buffer, rlen, "From PCIe RC to TAP interface\n", dumpHexOnly);
 #endif
     	
     	nwrite = cwrite(tapFd, buffer, rlen);
@@ -568,7 +568,7 @@ int main (int Argc, char **ppArgv)
 
     	  nread = cread(tapFd, buffer, BUFSIZE);
 #ifdef ENABLE_DUMP
-    	  dump_data(buffer, nread, "From TAP interface\n", dumpHexOnly);
+    	  dump_data(buffer, nread, "From TAP interface to PCIe RC\n", dumpHexOnly);
 #endif
     	  // sent to LS2
     	  send_msg_ls2(buffer, nread, src_buff, &mapPCIe[REC_BASE/4], fd1); // data copied in transmitt buffer
