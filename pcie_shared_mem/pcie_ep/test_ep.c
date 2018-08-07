@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 NXP Semiconductor
+ * Copyright 2016-2018 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  */
