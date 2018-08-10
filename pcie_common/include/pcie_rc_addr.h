@@ -18,24 +18,44 @@
  * For S32V234 EVB: use 0x8FF00000 (end of RAM) and boot with 'mem=255M'
  *                  use 0xc1000000 and boot with 'memmap=1M$0xc1000000'
  * 
- * FIXME remove hardcoding of addresses */
+ * FIXME remove hardcoding of addresses
+ *
+ * EP_PCIE_DEVICE is the device string of the EndPoint, as listed by 'lspci'
+ */
+
 #if defined(PCIE_SHMEM_BLUEBOX)		/* LS2 on BlueBox */
-#define EP_BAR2_ADDR	0x1446100000
+#ifndef EP_BAR2_ADDR
+	#define EP_BAR2_ADDR	0x1446100000
+#endif
+#ifndef EP_PCIE_DEVICE
+	#define EP_PCIE_DEVICE	"0000:01:00.0"
+#endif
 #ifndef RC_DDR_ADDR
-/* Physical memory mapped by the RC CPU */
-#define RC_DDR_ADDR	0x83A0000000
+	/* Physical memory mapped by the RC CPU */
+	#define RC_DDR_ADDR	0x83A0000000
 #endif
 
 #elif defined(PCIE_SHMEM_BLUEBOXMINI) /* LS2 on Bluebox Mini */
-#define EP_BAR2_ADDR    0x3840100000
-/* Physical memory mapped by the RC CPU */
+#ifndef EP_BAR2_ADDR
+	#define EP_BAR2_ADDR    0x3840100000
+#endif
+#ifndef EP_PCIE_DEVICE
+	#define EP_PCIE_DEVICE	"0001:01:00.0"
+#endif
 #ifndef RC_DDR_ADDR
-#define RC_DDR_ADDR	0x83A0000000
+	/* Physical memory mapped by the RC CPU */
+	#define RC_DDR_ADDR	0x83A0000000
 #endif
 
 #else					/* EVB-PCIE */
-#define EP_BAR2_ADDR	0x72200000ll
+#ifndef EP_BAR2_ADDR
+	#define EP_BAR2_ADDR	0x72200000ll
+#endif
+#ifndef EP_PCIE_DEVICE
+	#define EP_PCIE_DEVICE	"0000:01:00.0"
+#endif
 #ifndef RC_DDR_ADDR
-#define RC_DDR_ADDR	0x8FF00000 /* shared_mem block in dtb */
+	/* Physical memory mapped by the RC CPU */
+	#define RC_DDR_ADDR	0x8FF00000 /* shared_mem block in dtb */
 #endif
 #endif

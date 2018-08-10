@@ -424,11 +424,7 @@ int main (int Argc, char **ppArgv)
   	  printf(" Cannot allocate heap for dest buffer\n");
   }
 
-#ifdef PCIE_SHMEM_BLUEBOXMINI
-  fd1 = open("/sys/bus/pci/devices/0003:01:00.0/resource", O_RDONLY); /* Bluebox Mini */
-#else
-  fd1 = open("/sys/bus/pci/devices/0000:01:00.0/resource", O_RDONLY); /* Bluebox or S32V234EVB*/
-#endif
+  fd1 = open("/sys/bus/pci/devices/" EP_PCIE_DEVICE "/resource", O_RDONLY);
 
   if (fd1 < 0) {
   	  perror("PCI device S32V not found");
