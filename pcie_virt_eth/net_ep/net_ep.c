@@ -167,8 +167,9 @@ int cread(int fd, uint8_t *buf, int n){
   int nread;
 
   if((nread=read(fd, buf, n)) < 0){
+#ifdef ENABLE_DUMP
     perror("Reading data");
-    exit(1);
+#endif
   }
   return nread;
 }
@@ -186,8 +187,9 @@ int cwrite(int fd, uint8_t *buf, int n){
   int nwrite;
 
   if ((nwrite=write(fd, buf, n)) < 0) {
+#ifdef ENABLE_DUMP
     perror("Writing data");
-    exit(1);
+#endif
   }
   return nwrite;
 }
@@ -534,19 +536,20 @@ int main (int Argc, char **ppArgv)
     while (goon) {
       rlen = receive_msg_ls2(buffer, dest_buff, mapPCIe, fd1);
       if (rlen > 0) {
-    	// data received from LS2
-    	int nwrite;
-    	
+        // data received from LS2
+        int nwrite;
+
 #ifdef ENABLE_DUMP
-    	dump_data(buffer, rlen, "From PCIe RC to TAP interface\n", dumpHexOnly);
+        dump_data(buffer, rlen, "From PCIe RC to TAP interface\n", dumpHexOnly);
 #endif
-    	
-    	nwrite = cwrite(tapFd, buffer, rlen);
-    	if (nwrite != rlen) {
-    	  fprintf(stderr, "Not all data written to TAP\n");
-    	}
+
+        nwrite = cwrite(tapFd, buffer, rlen);
 #ifdef ENABLE_DUMP
-    	printf("Done\n");
+        if (nwrite != rlen) {
+          fprintf(stderr, "Not all data written to TAP (only %d of %d)\nTAP interface not ready\n",
+                nwrite, rlen);
+        }
+        printf("Done\n");
 #endif
       }
     }

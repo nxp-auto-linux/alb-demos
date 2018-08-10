@@ -150,8 +150,9 @@ int cread(int fd, uint8_t *buf, int n){
   int nread;
 
   if((nread=read(fd, buf, n)) < 0){
+#ifdef ENABLE_DUMP
     perror("Reading data");
-    exit(1);
+#endif
   }
   return nread;
 }
@@ -169,8 +170,9 @@ int cwrite(int fd, uint8_t *buf, int n){
   int nwrite;
 
   if ((nwrite=write(fd, buf, n)) < 0) {
+#ifdef ENABLE_DUMP
     perror("Writing data");
-    exit(1);
+#endif
   }
   return nwrite;
 }
@@ -476,18 +478,20 @@ int main (int Argc, char **ppArgv)
     while (goon) {
       rlen = receive_msg(buffer, &mapDDR[REC_BASE/4]);
       if (rlen > 0) {
-    	// data received from S32V
-    	int nwrite;
-    	
+      // data received from S32V
+      int nwrite;
+
 #ifdef ENABLE_DUMP
-    	dump_data((uint8_t *)buffer, rlen, "From PCIe EP to TAP interface\n", dumpHexOnly);
+      dump_data((uint8_t *)buffer, rlen, "From PCIe EP to TAP interface\n", dumpHexOnly);
 #endif
-    	nwrite = cwrite(tapFd, (uint8_t *)buffer, rlen);
-    	if (nwrite != rlen) {
-    	  fprintf(stderr, "Not all data written to TAP\n");
-    	}
+
+      nwrite = cwrite(tapFd, (uint8_t *)buffer, rlen);
 #ifdef ENABLE_DUMP
-    	printf("Done\n");
+      if (nwrite != rlen) {
+        fprintf(stderr, "Not all data written to TAP (only %d of %d)\nTAP interface not ready\n",
+                nwrite, rlen);
+        }
+      printf("Done\n");
 #endif
       }
     }
