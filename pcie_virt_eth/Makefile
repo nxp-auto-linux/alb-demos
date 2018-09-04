@@ -15,5 +15,4 @@ $(MAKECMDGOALS):
 endif
 # if SETUP has not been declared on the command-line, it will receive a default
 # value in pcie_shmem_common.mk
-	$(foreach app, $(apps), make S32V_BOARD_SETUP=$(S32V_BOARD_SETUP) \
-		-C $(app) $(MAKECMDGOALS);)
+	$(foreach app, $(apps), make -C $(app) $(MAKECMDGOALS);)

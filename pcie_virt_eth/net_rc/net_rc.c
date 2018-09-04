@@ -38,6 +38,7 @@
 #include "netComm.h"
 
 #include "../../pcie_common/include/pcie_rc_addr.h"
+#include "../../pcie_common/include/pcie_handshake.h"
 
 // /sys/bus/pci/devices/0000\:01\:00.0/
 // root@ls2080abluebox:~# cat /sys/bus/pci/devices/0000\:01\:00.0/resource
@@ -466,6 +467,14 @@ int main (int Argc, char **ppArgv)
   } else {
   	  printf(" /dev/mem DDR area mapping OK\n");
   }
+
+  /* Connect to EP and send RC_DDR_ADDR */
+  printf("Connecting to EP\n");
+  if (pcie_notify_ep((struct s32v_handshake *)mapPCIe) < 0) {
+      perror("Unable to send RC_DDR_ADDR to EP");
+      goto err;
+  }
+
   memset(src_buff, 0, mapsize);
   memcpy(mapDDR, src_buff, mapsize);
   sleep(1);

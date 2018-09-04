@@ -40,6 +40,7 @@
 #include "../net_rc/netComm.h"
 #include "../../pcie_common/include/pcie_ops.h"
 #include "../../pcie_common/include/pcie_ep_addr.h"
+#include "../../pcie_common/include/pcie_handshake.h"
 
 //------------------------------------------------------------------------------
 // Macros & Constants
@@ -69,21 +70,6 @@ const int POLL_ERROR  = (POLLERR | POLLHUP | POLLNVAL);
 #endif
 
 #define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
-
-/* Outbound region structure */
-struct s32v_outbound_region outb1 = {
-    RC_DDR_ADDR,  	  /* target_addr */
-    S32V_PCIE_BASE_ADDR,    /* base_addr */
-    MESSBUF_LONG, 	  /* size >= 64K(min for PCIE on S32V) */
-    0,			  /* region number */
-    0			  /* region type = mem */
-};
-
-struct s32v_inbound_region inb1 = {
-    2,			  /* BAR2 */
-    EP_LOCAL_DDR_ADDR,    /* locally-mapped DDR on EP (target addr) */
-    0			  /* region 0 */
-};
 
 //------------------------------------------------------------------------------
 // Type definitions
@@ -409,6 +395,7 @@ int main (int Argc, char **ppArgv)
   unsigned int  *mapPCIe = NULL;
   unsigned int  *src_buff;
   unsigned int  *dest_buff;
+  unsigned long int rc_ddr_addr = UNDEFINED_DATA;
   int           goon, rlen;
   pid_t         pidf;
   int           C;
@@ -505,25 +492,29 @@ int main (int Argc, char **ppArgv)
   } else {
   	  printf("/dev/mem PCIe area mapping OK\n");
   }
-  printf(" RC_DDR_ADDR = %lx\n", RC_DDR_ADDR);
+
+  /* Setup inbound window for receiving data into local shared buffer */
+  ret = pcie_init_inbound(fd1);
+  if (ret < 0) {
+      perror("Error while setting inbound region");
+      goto err;
+  } else {
+      printf("Inbound region setup successfully\n");
+  }
+
+  printf("Connecting to RC...\n");
+  rc_ddr_addr = pcie_wait_for_rc((struct s32v_handshake *)mapDDR);
+  printf(" RC_DDR_ADDR = %llx\n", rc_ddr_addr);
 
   /* Setup outbound window for accessing RC mem */
-  ret = ioctl(fd1, SETUP_OUTBOUND, &outb1);
+  ret = pcie_init_outbound(rc_ddr_addr, MESSBUF_LONG, fd1);
   if (ret < 0) {
-  	  perror("Error while setting outbound1 region");
+  	  perror("Error while setting outbound region");
   	  goto err;
   } else {
-  	  printf("Outbound1 region setup successfully\n");
+  	  printf("Outbound region setup successfully\n");
   }
 
-  /* Same thing for inbound window for transactions from RC */
-  ret = ioctl(fd1, SETUP_INBOUND, &inb1);
-  if (ret < 0) {
-  	  perror("Error while setting inbound1 region");
-  	  goto err;
-  } else {
-  	  printf("Inbound1 region setup successfully\n");
-  }
   memset(src_buff, 8, MESSBUF_LONG);
   memcpy((unsigned int *) mapPCIe, (unsigned int *) src_buff, MESSBUF_LONG);
   printf("RecBase %lx\n", (long unsigned int) &mapPCIe[REC_BASE/4]);

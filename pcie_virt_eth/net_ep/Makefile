@@ -4,16 +4,12 @@
 # SPDX-License-Identifier:     GPL-2.0+
 #
 
-include ../../pcie_common/pcie_shmem_common.mk
-
 # LDFLAGS	+= -lpthread
 
 CFLAGS	+= -g -O3
-# $(SETUP) should have been properly set by the parent Makefile
-CFLAGS	+= -D$(S32V_BOARD_SETUP)
 
-OBJ	+= net_ep.o
-DEPS	:= pcie_ops.h
+OBJ	+= ../../pcie_common/pcie_ep_addr.o ../../pcie_common/pcie_ops.o net_ep.o
+DEPS	:= pcie_ops.h pcie_ep_addr.h
 EXE	:= net_ep
 
 # this one should be last on the include list

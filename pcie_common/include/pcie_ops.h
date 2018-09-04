@@ -64,3 +64,7 @@ struct s32v_bar {
 	unsigned int size;
 	unsigned int addr;
 };
+
+int pcie_init_inbound(int fd);
+
+int pcie_init_outbound(unsigned long long int targ_addr, unsigned int buff_size, int fd);
