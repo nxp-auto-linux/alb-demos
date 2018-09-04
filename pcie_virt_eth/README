@@ -132,12 +132,6 @@ ARCH=arm64
 CROSS_COMPILE set for your cross-compiler (e.g. "<PATH_TO_TOOLCHAIN>/aarch64-linux-gnu-"
 for the Linaro toolchain).
 
-To manually select the current setup (NXP Bluebox, BlueBox Mini or S32V234 EVB + PCIE),
-pass the "S32V_BOARD_SETUP=<chosen_setup>" argument on the make command-line or directly
-in file pcie_virt_eth/pcie_shmem_common.mk, where "chosen_setup" can be either PCIE_SHMEM_BLUEBOX,
-PCIE_SHMEM_BLUEBOXMINI (default) or PCIE_SHMEM_EVB.
-If S32V_BOARD_SETUP is omitted altogether, PCIE_SHMEM_BLUEBOXMINI is selected by default.
-
 Two separate executables will be generated, one for the EP (pcie_virt_eth/net_ep/net_ep), one for the
 RC (pcie_virt_eth/net_rc/net_rc).
 
