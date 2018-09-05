@@ -126,32 +126,15 @@ which contains all other Auto Linux BSP demos. NOTE: the local (host) build
 environment must have the CROSS_COMPILE environment variable correctly set for
 your cross-compiler (e.g. "aarch64-linux-gnu-" for the Linaro toolchain).
 
-To manually select the current setup (NXP Bluebox or S32V234 EVB + PCIE),
-pass the "S32V_BOARD_SETUP=<chosen_setup>" argument on the make command-line,
-where "chosen_setup" can be either PCIE_SHMEM_BLUEBOX or PCIE_SHMEM_EVB.
-If S32V_BOARD_SETUP is omitted altogether, PCIE_SHMEM_BLUEBOX is selected by default.
-
 E.g.:
-[pcie_shared_mem/]> make S32V_BOARD_SETUP=PCIE_SHMEM_EVB
-  make S32V_BOARD_SETUP=PCIE_SHMEM_EVB -C pcie_rc ;  make S32V_BOARD_SETUP=PCIE_SHMEM_EVB -C pcie_ep ;
-  make[1]: Entering directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_rc'
-  aarch64-linux-gnu-gcc -o test_rc.o -c test_rc.c -DPCIE_SHMEM_EVB -Wall
-  aarch64-linux-gnu-gcc -o test_rc test_rc.o -lpthread
-  make[1]: Leaving directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_rc'
-  make[1]: Entering directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_ep'
-  aarch64-linux-gnu-gcc -o test_ep.o -c test_ep.c -g -DPCIE_SHMEM_EVB -Wall
-  aarch64-linux-gnu-gcc -o test_ep test_ep.o -lpthread
-  make[1]: Leaving directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_ep'
-[pcie_shared_mem/]>
-
 [pcie_shared_mem/]> make
-  make S32V_BOARD_SETUP= -C pcie_rc ;  make S32V_BOARD_SETUP= -C pcie_ep ;
+  make -C pcie_rc ;  make -C pcie_ep ;
   make[1]: Entering directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_rc'
-  aarch64-linux-gnu-gcc -o test_rc.o -c test_rc.c -DPCIE_SHMEM_BLUEBOX -Wall
+  aarch64-linux-gnu-gcc -o test_rc.o -c test_rc.c -Wall
   aarch64-linux-gnu-gcc -o test_rc test_rc.o -lpthread
   make[1]: Leaving directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_rc'
   make[1]: Entering directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_ep'
-  aarch64-linux-gnu-gcc -o test_ep.o -c test_ep.c -g -DPCIE_SHMEM_BLUEBOX -Wall
+  aarch64-linux-gnu-gcc -o test_ep.o -c test_ep.c -g -Wall
   aarch64-linux-gnu-gcc -o test_ep test_ep.o -lpthread
   make[1]: Leaving directory '/work/amp-repos/alb-demos/pcie_shared_mem/pcie_ep'
 [pcie_shared_mem/]>
