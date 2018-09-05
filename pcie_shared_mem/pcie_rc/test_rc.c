@@ -16,6 +16,7 @@
 #include <sys/mman.h>
 
 #include "../../pcie_common/include/pcie_rc_addr.h"
+#include "../../pcie_common/include/pcie_handshake.h"
 
 #define CMD1_PATTERN	0x42
 #define CMD3_PATTERN	0xC8
@@ -61,7 +62,6 @@ int main(int argc, char *argv[])
 	unsigned long int nanoSecDiff1;
 	unsigned long int nanoSecDiff2;
 	char c;
-	unsigned int first_cmd = 0;
 	unsigned int go_exit = 0;
 	unsigned short int go1 = 0;
 	unsigned short int go2 = 0;
@@ -69,11 +69,61 @@ int main(int argc, char *argv[])
 	
 	struct timespec tps;
 	
+	src_buff = (unsigned int *)malloc(mapsize);
+	if (!src_buff) {
+		printf("\n Cannot allocate mem for source buffer");
+	}
+
+	dest_buff = (unsigned int *)malloc(mapsize);
+	if (!dest_buff) {
+		printf("\n Cannot allocate heap for dest buffer");
+	}
+
+	fd1 = open("/dev/mem", O_RDWR);
+	if (fd1 < 0) {
+		perror("Errors opening /dev/mem file");
+		goto err;
+	} else {
+		printf("\n /dev/mem file opened successfully");
+	}
+	
+	/* MAP PCIe area */
+	printf("\n EP_BAR2_ADDR = %llx", EP_BAR2_ADDR);
+	mapPCIe = (unsigned int *)mmap(NULL, mapsize,
+			PROT_READ | PROT_WRITE,
+			MAP_SHARED, fd1, EP_BAR2_ADDR);
+	if (!mapPCIe) {
+		perror("/dev/mem PCIe area mapping FAILED");
+		goto err;
+	} else {
+		printf("\n /dev/mem PCIe area mapping  OK");
+	}	
+	
+	/* MAP DDR free 1M area. This was reserved at boot time */
+	mapDDR = (unsigned int *)mmap(NULL, MAP_DDR_SIZE,
+			PROT_READ | PROT_WRITE,
+			MAP_SHARED, fd1, RC_DDR_ADDR);
+	if (!mapDDR) {
+		perror("/dev/mem DDR area mapping FAILED");
+		goto err;
+	} else {
+		printf("\n /dev/mem DDR area mapping OK");
+	}
+
+	/* Connect to EP and send RC_DDR_ADDR */
+	printf("\n Connecting to EP\n");
+	if (pcie_notify_ep((struct s32v_handshake *)mapPCIe) < 0) {
+	    perror("Unable to send RC_DDR_ADDR to EP");
+	    goto err;
+	}
+
+	printf("Hello PCIe RC mem test app\n");
+
 start :
 	go1 = 0;
 	go2 = 0;
 	cmd = 0xFF;
-	printf("\nHello PCIe RC mem test app");
+
 	printf("\n Test cases :\
 	\n 1. Single 1M Write transfer from local buffer to S32V_EP mem (pattern = %#x)\
 	\n 2. Single 1M Read  transfer from S32V_EP mem to local buffer\
@@ -102,16 +152,16 @@ start :
 			go1 = 1;
 			break;
 		case '3':
-			printf("\n Enter bytes transfer size in hex (max 1M, 128bytes multiple): ");
+			printf("\n Enter bytes transfer size in hex (max %x, 128bytes multiple): ",
+				MAP_DDR_SIZE);
 			do {
 				scanf("%s" , word);
-				if (!sscanf(word, "%x", &mapsize))
-					printf ("\n ERR, invalid input");
+				if (!sscanf(word, "%x", &mapsize) || (mapsize > MAP_DDR_SIZE))
+					printf ("\n ERR, invalid input '%s'", word);
 				else {
 					cmd = 3;
 					go1 = 1;
 					go2 = 1;
-					first_cmd = 0;
 					printf ("\n mapsize = %x",mapsize);
 					printf ("\n OK, going to transfer");
 				}
@@ -142,51 +192,7 @@ start :
 	} while (!go1);
 
 	printf("\n Command code  = %d \n", cmd);
-	printf("\n mapsize = %x", mapsize);
 
-	if (!first_cmd){
-		first_cmd = 1;
-		src_buff = (unsigned int *)malloc(mapsize);
-		if (!src_buff) {
-			printf("\n Cannot allocate mem for source buffer");
-		}
-
-		dest_buff = (unsigned int *)malloc(mapsize);
-		if (!dest_buff) {
-			printf("\n Cannot allocate heap for dest buffer");
-		}
-
-		fd1 = open("/dev/mem", O_RDWR);
-		if (fd1 < 0) {
-			perror("Errors opening /dev/mem file");
-			goto err;
-		} else {
-			printf("\n /dev/mem file opened successfully");
-		}
-		
-		/* MAP PCIe area */
-		printf("\n EP_BAR2_ADDR = %llx", EP_BAR2_ADDR);
-		mapPCIe = (unsigned int *)mmap(NULL, mapsize,
-				PROT_READ | PROT_WRITE,
-				MAP_SHARED, fd1, EP_BAR2_ADDR);
-		if (!mapPCIe) {
-			perror("/dev/mem PCIe area mapping FAILED");
-			goto err;
-		} else {
-			printf("\n /dev/mem PCIe area mapping  OK");
-		}	
-		
-		/* MAP DDR free 1M area. This was reserved at boot time */
-		mapDDR = (unsigned int *)mmap(NULL, MAP_DDR_SIZE,
-				PROT_READ | PROT_WRITE,
-				MAP_SHARED, fd1, RC_DDR_ADDR);
-		if (!mapDDR) {
-			perror("/dev/mem DDR area mapping FAILED");
-			goto err;
-		} else {
-			printf("\n /dev/mem DDR area mapping OK");
-		}
-	}
 	switch (cmd) {
 	case 1: /* Write to PCIe area */
 		memset(src_buff, CMD1_PATTERN, mapsize);
@@ -244,6 +250,8 @@ start :
 		printf ("\n /* (bytes / Period_nanosec) * 10^9 / (1024 * 1024)  */");
 		printf("\n Throughput write =%3.3f MB/sec", ((float)mapsize/nanoSecDiff1)*(float)953.67);
 		printf("\n Throughput read =%3.3f MB/sec", ((float)mapsize/nanoSecDiff2)*(float)953.67);
+		/* Restore mapsize for the other commands */
+		mapsize = MAP_DDR_SIZE;
 		break;
 	case 4 : 
 		/* Fill local DDR_BASE + 1M with DW pattern 0x55AA55AA */
