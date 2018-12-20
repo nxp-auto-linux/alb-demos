@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 NXP Semiconductors
+ * Copyright 2018 NXP
  *
  * SPDX-License-Identifier:		BSD-3-Clause
  */
@@ -146,7 +147,7 @@ static int gpio_value(unsigned pin_no, int val)
 
 int set_value(unsigned pin_no, unsigned val)
 {
-	return gpio_value(pin_no, val & 0x1);
+	return gpio_value(pin_no, val & 0x1) == ERROR ? ERROR : 0;
 }
 
 int get_value(unsigned pin_no)

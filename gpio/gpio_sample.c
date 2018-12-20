@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 NXP Semiconductors
+ * Copyright 2018 NXP
  *
  * SPDX-License-Identifier:		BSD-3-Clause
  */
@@ -72,7 +73,7 @@ int main(int argc, char *argv[])
 		if (status)
 			return status;
 
-		set_direction(pin, OUT);
+		status = set_direction(pin, OUT);
 		if (status)
 			return status;
 
