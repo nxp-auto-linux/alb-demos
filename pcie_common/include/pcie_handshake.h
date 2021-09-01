@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 NXP
+ * Copyright 2018-2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  * 
@@ -23,3 +23,8 @@ unsigned long long int pcie_wait_for_rc(struct s32v_handshake *phandshake);
    To be called from the RC side
  */
 int pcie_notify_ep(struct s32v_handshake *phandshake);
+
+/* Helper function for parsing command line arguments and setting
+   the internal address variables needed for the handshake
+ */
+int pcie_parse_command_arguments(int argc, char *argv[]);

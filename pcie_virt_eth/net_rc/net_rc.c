@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  * 
@@ -37,10 +37,10 @@
 #include <ctype.h>
 #include "netComm.h"
 
-#include "../../pcie_common/include/pcie_rc_addr.h"
 #include "../../pcie_common/include/pcie_handshake.h"
 
-// /sys/bus/pci/devices/0000\:01\:00.0/
+// To check S32V234 EP config space (including BAR addresses):
+//
 // root@ls2080abluebox:~# cat /sys/bus/pci/devices/0000\:01\:00.0/resource
 // 0x0000001446000000 0x00000014460fffff 0x0000000000040200
 // 0x0000000000000000 0x0000000000000000 0x0000000000000000
@@ -49,16 +49,6 @@
 // 0x0000001446210000 0x0000001446210fff 0x0000000000040200
 // 0x0000001446200000 0x000000144620ffff 0x0000000000040200
 // 0x0000000000000000 0x0000000000000000 0x0000000000000000 
-// root@ls2080abluebox:~# cat /sys/bus/pci/devices/0000\:01\:00.0/irq
-// 217  
-// root@ls2080abluebox:~# cat /sys/bus/pci/devices/0000\:01\:00.0/uevent
-// PCI_CLASS=B8000
-// PCI_ID=1957:4001
-// PCI_SUBSYS_ID=0000:0000
-// PCI_SLOT_NAME=0000:01:00.0
-// MODALIAS=pci:v00001957d00004001sv00000000sd00000000bc0Bsc80i00
-// root@ls2080abluebox:~# cat /sys/bus/pci/devices/0000\:01\:00.0/vendor
-// 0x1957
 
 //------------------------------------------------------------------------------
 // Macros & Constants
@@ -131,11 +121,13 @@ int memcpyW(unsigned int *dst, unsigned int *src, int len)
  */
 static void PrintUsage(void)
 {
-  fprintf(stderr, "Usage: net_ep [OPTION...]\n"
+  fprintf(stderr, "Usage: net_rc [OPTION...]\n"
           "\n"
           "  -h                 Print this help output\n"
-	  "  -i <ifacename>     Name of interface to use (mandatory)\n"
-          "\n");
+          "  -i <ifacename>     Name of interface to use (default tun1)\n"
+          "  -a <ddr_addr>      Local DDR address for shared mem buffer, from device tree, hex (mandatory)\n"
+          "  -e <ep_bar2_addr>  S32V EP BAR2 address, displayed during enumeration, hex (mandatory)\n\n");
+  fprintf(stderr, "E.g. for BBMini (LS2084A):\nnet_rc -a 0x8080100000 -e 0x3840100000\n\n");
 }
 
 /**
@@ -356,6 +348,9 @@ static void send_msg(unsigned int *buf, int len, unsigned int *mapDDR)
   }
 }
 
+extern unsigned long int ep_bar2_addr;
+extern unsigned long int rc_local_ddr_addr;
+
 /**
  * @brief network through PCIe shared memory
  * @param Argc   command line argument count
@@ -378,8 +373,11 @@ int main (int Argc, char **ppArgv)
   char		if_name[IFNAMSIZ] = "tun1";
   unsigned int  __attribute__ ((aligned (8))) buffer[BUFSIZE/4];
 
-  // parse command line options using getopt() for POSIX compatibility
-  while ((C = getopt(Argc, ppArgv, "+h?i:")) != -1)
+  if (pcie_parse_command_arguments(Argc, ppArgv))
+    exit(1);
+		
+  // parse net_rc specific command line options using getopt() for POSIX compatibility
+  while ((C = getopt(Argc, ppArgv, "+h?i:a:e:")) != -1)
   {
     switch (C)
     {
@@ -389,8 +387,8 @@ int main (int Argc, char **ppArgv)
         break;
 
       case 'i':
-	strncpy(if_name, optarg, IFNAMSIZ-1);
-	break;
+        strncpy(if_name, optarg, IFNAMSIZ-1);
+        break;
 
       case '?':
         if (isprint(optopt))
@@ -427,13 +425,6 @@ int main (int Argc, char **ppArgv)
   	  printf(" Cannot allocate heap for dest buffer\n");
   }
 
-  fd1 = open("/sys/bus/pci/devices/" EP_PCIE_DEVICE "/resource", O_RDONLY);
-
-  if (fd1 < 0) {
-  	  perror("PCI device S32V not found");
-  	  goto err;
-  }
-  close(fd1);
   fd1 = open("/dev/mem", O_RDWR);
   if (fd1 < 0) {
   	  perror("Errors opening /dev/mem file");
@@ -445,9 +436,9 @@ int main (int Argc, char **ppArgv)
   /* MAP PCIe area */
   mapPCIe = (unsigned int *)mmap(NULL, mapsize,
   		  PROT_READ | PROT_WRITE,
-  		  MAP_SHARED, fd1, EP_BAR2_ADDR);
+  		  MAP_SHARED, fd1, ep_bar2_addr);
   printf(" EP_BAR2_ADDR = %lx, mapPCIe = %lx\n",
-  	 EP_BAR2_ADDR, (long unsigned int) mapPCIe);
+  	 ep_bar2_addr, (long unsigned int) mapPCIe);
   if (!mapPCIe) {
   	  perror("/dev/mem PCIe area mapping FAILED");
   	  goto err;
@@ -458,9 +449,9 @@ int main (int Argc, char **ppArgv)
   /* MAP DDR free 1M area. This was reserved at boot time */
   mapDDR = (unsigned int *)mmap(NULL, MAP_DDR_SIZE,
   		  PROT_READ | PROT_WRITE,
-  		  MAP_SHARED, fd1, RC_DDR_ADDR);
+  		  MAP_SHARED, fd1, rc_local_ddr_addr);
   printf(" RC_DDR_ADDR = %lx, mapDDR = %lx\n",
-  	  RC_DDR_ADDR, (long unsigned int) mapDDR);
+  	  rc_local_ddr_addr, (long unsigned int) mapDDR);
   if (!mapDDR) {
   	  perror("/dev/mem DDR area mapping FAILED");
   	  goto err;

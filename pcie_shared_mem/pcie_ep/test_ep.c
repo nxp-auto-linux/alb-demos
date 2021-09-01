@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2018 NXP
+ * Copyright 2016-2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  */
@@ -62,6 +62,8 @@ static void *loop_pcie_write(void *va)
 	return NULL;
 }
 
+extern unsigned long int ep_local_ddr_addr;
+
 int main(int argc, char *argv[])
 {
 	int fd1;
@@ -93,6 +95,14 @@ int main(int argc, char *argv[])
 	/* Struct for DMA ioctl */
 	struct dma_data_elem dma_single = {0,0,0,0,0,0};
 
+	if (pcie_parse_command_arguments(argc, argv)) {
+		printf("\nUsage:\n%s -a <ep_local_ddr_addr_hex>\n\n", argv[0]);
+		printf("E.g. for BBMini (S32V234):\n %s -a 0xC1100000\n\n", argv[0]);
+		exit(1);
+	}
+
+	printf ("EP local DDR address = 0x%lX\n", ep_local_ddr_addr);
+
 	/* Set handler for SIGUSR */
 	memset(&action, 0, sizeof (action));	/* clean variable */
 	action.sa_handler = signal_handler;	/* specify signal handler */
@@ -122,7 +132,7 @@ int main(int argc, char *argv[])
 	/* MAP DDR free 1M area. This was reserved at boot time */
 	mapDDR = mmap(NULL, MAP_DDR_SIZE,
 			PROT_READ | PROT_WRITE,
-			MAP_SHARED, fd2, EP_LOCAL_DDR_ADDR);
+			MAP_SHARED, fd2, ep_local_ddr_addr);
 	if (!mapDDR) {
 		perror("/dev/mem DDR area mapping FAILED");
 		goto err;
@@ -152,7 +162,7 @@ int main(int argc, char *argv[])
 
 	printf("\n Connecting to RC...\n");
 	rc_ddr_addr = pcie_wait_for_rc((struct s32v_handshake *)mapDDR);
-	printf(" RC_DDR_ADDR = %llx", rc_ddr_addr);
+	printf(" RC_DDR_ADDR = %lx", rc_ddr_addr);
 
 	/* Setup outbound window for accessing RC mem */
 	ret = pcie_init_outbound(rc_ddr_addr, MAP_DDR_SIZE, fd1);
@@ -344,7 +354,7 @@ start:
 		dma_single.flags = 0;
 		dma_flag = 0;
 		dma_single.size = mapsize;
-		dma_single.sar = EP_LOCAL_DDR_ADDR;
+		dma_single.sar = ep_local_ddr_addr;
 		dma_single.dar = S32V_PCIE_BASE_ADDR;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_WRITE_ELEM | DMA_FLAG_EN_DONE_INT | DMA_FLAG_LIE);
@@ -369,10 +379,10 @@ start:
 		dma_flag = 0;
 		dma_single.size = mapsize;
 		dma_single.sar = S32V_PCIE_BASE_ADDR;
-		dma_single.dar = EP_LOCAL_DDR_ADDR;
+		dma_single.dar = ep_local_ddr_addr;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_READ_ELEM | DMA_FLAG_EN_DONE_INT  | DMA_FLAG_LIE);
-		
+
 		/* Get timestamp before initiating transfer */
 		clock_gettime(CLOCK_REALTIME, &tps);
 		nanoSec2Start = tps.tv_nsec;
@@ -381,7 +391,7 @@ start:
 		while (!dma_flag) { ; }
 		/* Get timestamp after transfer */		
 		clock_gettime(CLOCK_REALTIME, &tps);
-		nanoSec2Stop = tps.tv_nsec;		
+		nanoSec2Stop = tps.tv_nsec;
 		nanoSecDiff2 = nanoSec2Stop - nanoSec2Start;
 		printf("\n Throughput read =%3.3f MB/sec", ((float)mapsize/nanoSecDiff2)*(float)953.67);		
 		break;

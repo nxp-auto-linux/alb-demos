@@ -1,10 +1,10 @@
 /*
- * Copyright 2016-2018 NXP
+ * Copyright 2016-2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  */
 
-#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
@@ -15,7 +15,6 @@
 #include <pthread.h>
 #include <sys/mman.h>
 
-#include "../../pcie_common/include/pcie_rc_addr.h"
 #include "../../pcie_common/include/pcie_handshake.h"
 
 #define CMD1_PATTERN	0x42
@@ -43,15 +42,20 @@ static void *loop_pcie_write(void *va)
 	return NULL;
 }
 
-int main(int argc, char *argv[])
+extern unsigned long int ep_bar2_addr;
+extern unsigned long int rc_local_ddr_addr;
 
+int main(int argc, char *argv[])
 {
 	int fd1;
 	unsigned int *mapDDR;
 	unsigned int *mapPCIe;
 	unsigned int *src_buff;
 	unsigned int *dest_buff;
-	unsigned int mapsize = MAP_DDR_SIZE;/* Use a default 1M value if no arg */
+
+	/* Use a default 1M value if no arg */
+	unsigned int mapsize = MAP_DDR_SIZE;
+
 	unsigned int i = 0;
 	unsigned int j = 0;
 	unsigned int cmd = 0;
@@ -66,9 +70,18 @@ int main(int argc, char *argv[])
 	unsigned short int go1 = 0;
 	unsigned short int go2 = 0;
 	char word[256];
-	
+
 	struct timespec tps;
 	
+	if (pcie_parse_command_arguments(argc, argv)) {
+		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar2_addr_hex>\n\n", argv[0]);
+		printf("E.g. for BBMini (LS2084A):\n %s -a 0x8080100000 -e 0x3840100000\n\n", argv[0]);
+		exit(1);
+	}
+
+	printf ("RC local DDR address = 0x%lx\n", rc_local_ddr_addr);
+	printf ("EP BAR2 address = 0x%lx\n", ep_bar2_addr);
+
 	src_buff = (unsigned int *)malloc(mapsize);
 	if (!src_buff) {
 		printf("\n Cannot allocate mem for source buffer");
@@ -88,10 +101,9 @@ int main(int argc, char *argv[])
 	}
 	
 	/* MAP PCIe area */
-	printf("\n EP_BAR2_ADDR = %llx", EP_BAR2_ADDR);
 	mapPCIe = (unsigned int *)mmap(NULL, mapsize,
 			PROT_READ | PROT_WRITE,
-			MAP_SHARED, fd1, EP_BAR2_ADDR);
+			MAP_SHARED, fd1, ep_bar2_addr);
 	if (!mapPCIe) {
 		perror("/dev/mem PCIe area mapping FAILED");
 		goto err;
@@ -102,7 +114,7 @@ int main(int argc, char *argv[])
 	/* MAP DDR free 1M area. This was reserved at boot time */
 	mapDDR = (unsigned int *)mmap(NULL, MAP_DDR_SIZE,
 			PROT_READ | PROT_WRITE,
-			MAP_SHARED, fd1, RC_DDR_ADDR);
+			MAP_SHARED, fd1, rc_local_ddr_addr);
 	if (!mapDDR) {
 		perror("/dev/mem DDR area mapping FAILED");
 		goto err;
@@ -113,7 +125,7 @@ int main(int argc, char *argv[])
 	/* Connect to EP and send RC_DDR_ADDR */
 	printf("\n Connecting to EP\n");
 	if (pcie_notify_ep((struct s32v_handshake *)mapPCIe) < 0) {
-	    perror("Unable to send RC_DDR_ADDR to EP");
+	    perror("Unable to send RC local DDR address to EP");
 	    goto err;
 	}
 
@@ -128,7 +140,7 @@ start :
 	\n 1. Single 1M Write transfer from local buffer to S32V_EP mem (pattern = %#x)\
 	\n 2. Single 1M Read  transfer from S32V_EP mem to local buffer\
 	\n 3. Variable size throughput test Write(pattern = %#x) + Read to/from S32V_EP mem\
-	\n 4. Fill local DDR_BASE + 1M with DW pattern 0x55AA55AA\
+	\n 4. Fill local DDR address + 1M with DW pattern 0x55AA55AA\
 	\n 5. Read and print first and last 32DW(128bytes) in local DDR\
 	\n 6. Multiple 1M Write transfers from local buffer to S32V_EP mem (pattern = %#x)\
 	\n    This is essentially the same as #1, only looped and multithreaded.\
@@ -319,7 +331,7 @@ start :
 		goto start;
 
 err :
-		printf("\n Too many errors");
+	printf("\n Too many errors");
 
 exit : 
 	close(fd1);

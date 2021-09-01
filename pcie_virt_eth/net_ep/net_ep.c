@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  * 
@@ -99,8 +99,11 @@ static void PrintUsage(void)
   fprintf(stderr, "Usage: net_ep [OPTION...]\n"
           "\n"
           "  -h                 Print this help output\n"
-          "  -i <ifacename>     Name of interface to use (mandatory)\n"
+          "  -i <ifacename>     Name of interface to use (default tun1)\n"
+          "  -a <ddr_addr>      Local DDR address for shared mem buffer, from device tree, hex (mandatory)\n"
           "\n");
+
+  fprintf(stderr, "E.g. for BBMini (S32V234):\nnet_ep -a 0xC1100000\n\n");
 }
 
 #ifdef ENABLE_DMA
@@ -380,6 +383,8 @@ static void send_msg_ls2(uint8_t *buf, int len, unsigned int *dest_buff, unsigne
   }
 }
 
+extern unsigned long int ep_local_ddr_addr;
+
 /**
  * @brief network through PCIe shared memory
  * @param Argc   command line argument count
@@ -388,7 +393,7 @@ static void send_msg_ls2(uint8_t *buf, int len, unsigned int *dest_buff, unsigne
  */
 int main (int Argc, char **ppArgv)
 {
-  int           fd1 = NULL, fd2 = NULL, tapFd;
+  int           fd1 = 0, fd2 = 0, tapFd;
   int           flags = IFF_TAP;
   int           ret = 0;
   unsigned int  *mapDDR  = NULL;
@@ -403,8 +408,11 @@ int main (int Argc, char **ppArgv)
   char		if_name[IFNAMSIZ] = "tun1";
   uint8_t       buffer[BUFSIZE];
 
+  if (pcie_parse_command_arguments(Argc, ppArgv))
+    exit(1);
+
   // parse command line options using getopt() for POSIX compatibility
-  while ((C = getopt(Argc, ppArgv, "+h?i:")) != -1)
+  while ((C = getopt(Argc, ppArgv, "+h?i:a:")) != -1)
   {
     switch (C)
     {
@@ -414,8 +422,8 @@ int main (int Argc, char **ppArgv)
         break;
 
       case 'i':
-	strncpy(if_name, optarg, IFNAMSIZ-1);
-	break;
+        strncpy(if_name, optarg, IFNAMSIZ-1);
+        break;
 
       case '?':
         if (isprint(optopt))
@@ -470,9 +478,9 @@ int main (int Argc, char **ppArgv)
   /* MAP DDR free 1M area. This was reserved at boot time */
   mapDDR = mmap(NULL, MAP_DDR_SIZE,
   		  PROT_READ | PROT_WRITE,
-  		  MAP_SHARED, fd2, EP_LOCAL_DDR_ADDR);
-  printf(" EP_LOCAL_DDR_ADDR = %x, mapDDR = %lx\n",
-  	  EP_LOCAL_DDR_ADDR, (long unsigned int) mapDDR);
+  		  MAP_SHARED, fd2, ep_local_ddr_addr);
+  printf(" EP_LOCAL_DDR_ADDR = %lx, mapDDR = %lx\n",
+  	  ep_local_ddr_addr, (long unsigned int) mapDDR);
   if (!mapDDR) {
   	  perror("/dev/mem DDR area mapping FAILED");
   	  goto err;
@@ -504,7 +512,7 @@ int main (int Argc, char **ppArgv)
 
   printf("Connecting to RC...\n");
   rc_ddr_addr = pcie_wait_for_rc((struct s32v_handshake *)mapDDR);
-  printf(" RC_DDR_ADDR = %llx\n", rc_ddr_addr);
+  printf(" RC_DDR_ADDR = %lx\n", rc_ddr_addr);
 
   /* Setup outbound window for accessing RC mem */
   ret = pcie_init_outbound(rc_ddr_addr, MESSBUF_LONG, fd1);
