@@ -44,6 +44,7 @@ static void *loop_pcie_write(void *va)
 
 extern unsigned long int ep_bar2_addr;
 extern unsigned long int rc_local_ddr_addr;
+extern char batch_commands[];
 
 int main(int argc, char *argv[])
 {
@@ -58,7 +59,7 @@ int main(int argc, char *argv[])
 
 	unsigned int i = 0;
 	unsigned int j = 0;
-	unsigned int cmd = 0;
+	unsigned char cmd = 0;
 	unsigned long int nanoSec1Start;
 	unsigned long int nanoSec1Stop;
 	unsigned long int nanoSec2Start;
@@ -70,11 +71,12 @@ int main(int argc, char *argv[])
 	unsigned short int go1 = 0;
 	unsigned short int go2 = 0;
 	char word[256];
+	int batch_idx = 0;
 
 	struct timespec tps;
 	
 	if (pcie_parse_command_arguments(argc, argv)) {
-		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar2_addr_hex>\n\n", argv[0]);
+		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar2_addr_hex> [-c <commands>]\n\n", argv[0]);
 		printf("E.g. for BBMini (LS2084A):\n %s -a 0x8080100000 -e 0x3840100000\n\n", argv[0]);
 		exit(1);
 	}
@@ -151,57 +153,57 @@ start :
 	CMD3_PATTERN,
 	CMD6_PATTERN);
 
-	/* Stop for command */
-	do {
-		c = getchar();
-		switch (c) {
-		case '1':
-			cmd = 1;
-			go1 = 1;
-			break;
-		case '2':
-			cmd = 2;
-			go1 = 1;
-			break;
-		case '3':
-			printf("\n Enter bytes transfer size in hex (max %x, 128bytes multiple): ",
-				MAP_DDR_SIZE);
-			do {
-				scanf("%s" , word);
-				if (!sscanf(word, "%x", &mapsize) || (mapsize > MAP_DDR_SIZE))
-					printf ("\n ERR, invalid input '%s'", word);
-				else {
-					cmd = 3;
-					go1 = 1;
-					go2 = 1;
-					printf ("\n mapsize = %x",mapsize);
-					printf ("\n OK, going to transfer");
-				}
-			} while (!go2);
-			break;
-		case '4':
-			cmd = 4;
-			go1 = 1;
-			break;
-		case '5':
-			cmd = 5;
-			go1 = 1;
-			break;
-		case '6':
-			cmd = 6;
-			go1 = 1;
-			break;
-		case '7':
+	/* Check if we have batch commands; if not, go to interactive mode */
+	if (batch_commands[0]) {
+		cmd = batch_commands[batch_idx++];
+		if (cmd)
+			cmd -= '0';
+		else
 			cmd = 7;
-			go1 = 1;
-			break;
-		default :
-			/* Omit enter key */
-			if (c != '\n')
-				printf("\n Invalid input\n");
-			break;
+		printf("%c\n", cmd + '0');
+		if (cmd == 3) {
+			printf("Command 3 can be executed only in interactive mode\n");
+			goto exit;
 		}
-	} while (!go1);
+	} else {
+
+		/* Stop for command */
+		do {
+			c = getchar();
+			switch (c) {
+			case '1':
+			case '2':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+				cmd = c - '0';
+				go1 = 1;
+				break;
+			case '3':
+				printf("\n Enter bytes transfer size in hex (max %x, 128bytes multiple): ",
+					MAP_DDR_SIZE);
+				do {
+					scanf("%s" , word);
+					if (!sscanf(word, "%x", &mapsize) || (mapsize > MAP_DDR_SIZE))
+						printf ("\n ERR, invalid input '%s'", word);
+					else {
+						cmd = 3;
+						go1 = 1;
+						go2 = 1;
+						printf ("\n mapsize = %x",mapsize);
+						printf ("\n OK, going to transfer");
+					}
+				} while (!go2);
+				break;
+			default :
+				/* Omit enter key */
+				if (c != '\n')
+					printf("\n Invalid input\n");
+				break;
+			}
+		} while (!go1);
+	}
 
 	printf("\n Command code  = %d \n", cmd);
 

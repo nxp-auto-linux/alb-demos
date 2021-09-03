@@ -12,9 +12,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 unsigned long int ep_bar2_addr = 0;
 unsigned long int rc_local_ddr_addr = 0;
+char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 
 int pcie_notify_ep(struct s32v_handshake *phandshake)
 {
@@ -37,7 +39,7 @@ int pcie_parse_command_arguments(int argc, char *argv[])
 	char *rc_local_ddr_addr_str = NULL;
 	int c;
 
-	while ((c = getopt (argc, argv, "a:e:")) != -1)
+	while ((c = getopt (argc, argv, COMMON_COMMAND_ARGUMENTS)) != -1)
 		switch (c) {
 		  case 'a':
 			rc_local_ddr_addr_str = optarg;
@@ -47,8 +49,12 @@ int pcie_parse_command_arguments(int argc, char *argv[])
 			ep_bar2_addr_str = optarg;
 			ep_bar2_addr = strtoul(ep_bar2_addr_str, NULL, 16);
 			break;
+		  case 'c':
+			strncpy(batch_commands, optarg, MAX_BATCH_COMMANDS);
+			break;
 		}
 
+	batch_commands[MAX_BATCH_COMMANDS] = 0;
 	if (ep_bar2_addr && rc_local_ddr_addr)
 		return 0;
 

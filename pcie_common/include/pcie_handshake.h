@@ -9,6 +9,9 @@
 #define UNDEFINED_DATA 	0x0
 #define DEFAULT_TIMEOUT_US 10000
 
+#define COMMON_COMMAND_ARGUMENTS "a:e:c:"
+#define MAX_BATCH_COMMANDS 10
+
 /* A small buffer used for getting the RootComplex's DDR base address */
 struct s32v_handshake {
     unsigned long long int rc_ddr_addr;

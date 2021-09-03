@@ -377,7 +377,7 @@ int main (int Argc, char **ppArgv)
     exit(1);
 		
   // parse net_rc specific command line options using getopt() for POSIX compatibility
-  while ((C = getopt(Argc, ppArgv, "+h?i:a:e:")) != -1)
+  while ((C = getopt(Argc, ppArgv, "+h?i:" COMMON_COMMAND_ARGUMENTS)) != -1)
   {
     switch (C)
     {
