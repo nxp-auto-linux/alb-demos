@@ -208,6 +208,9 @@ start :
 	printf("\n Command code  = %d \n", cmd);
 
 	switch (cmd) {
+	case 0: /* Only for batch mode: 5s sleep */
+		sleep(5);
+		break;
 	case 1: /* Write to PCIe area */
 		memset(src_buff, CMD1_PATTERN, mapsize);
 		memcpy((unsigned int *)mapPCIe, (unsigned int *)src_buff, mapsize);

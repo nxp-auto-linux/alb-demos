@@ -266,6 +266,10 @@ start:
 	printf("\n Command code  = %d", cmd);
 
 	switch (cmd) {
+	/* special command, only for batch mode: 5s sleep */
+	case 0:
+		sleep(5);
+		break;
 	/* Single 1M bytes Write to LS_RC mem */
 	case 1:
 		memset(src_buff, CMD1_PATTERN, mapsize);
