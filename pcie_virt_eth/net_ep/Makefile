@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2018 NXP
+# Copyright 2017-2021 NXP
 #
 # SPDX-License-Identifier:     GPL-2.0+
 #
@@ -8,7 +8,7 @@
 
 CFLAGS	+= -g -O3
 
-OBJ	+= ../../pcie_common/pcie_ep_addr.o ../../pcie_common/pcie_ops.o net_ep.o
+OBJ	+= ../../pcie_common/pcie_ep_addr.o net_ep.o
 DEPS	:= pcie_ops.h pcie_ep_addr.h
 EXE	:= net_ep
 

@@ -5,7 +5,7 @@
  * Copyright (C) 2013 Kosagi
  *              http://www.kosagi.com
  * Copyright (C) 2014-2015 Freescale Semiconductor, Inc. All Rights Reserved.
- * Copyright 2016-2018 NXP
+ * Copyright 2016-2021 NXP
  *
  * Author: Sean Cross <xobs@kosagi.com>
  *
@@ -64,7 +64,3 @@ struct s32v_bar {
 	unsigned int size;
 	unsigned int addr;
 };
-
-int pcie_init_inbound(int fd);
-
-int pcie_init_outbound(unsigned long long int targ_addr, unsigned int buff_size, int fd);

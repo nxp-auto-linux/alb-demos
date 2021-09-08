@@ -12,3 +12,7 @@
 #ifndef EP_BAR
 #define EP_BAR 2
 #endif
+
+int pcie_init_inbound(int fd);
+
+int pcie_init_outbound(unsigned long long int targ_addr, unsigned int buff_size, int fd);

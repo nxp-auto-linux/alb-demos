@@ -8,8 +8,10 @@
  */
 
 #include "include/pcie_ep_addr.h"
+#include "include/pcie_ops.h"
 #include "include/pcie_handshake.h"
 
+#include <sys/ioctl.h> /* ioctl() */
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,6 +20,42 @@
 unsigned long int ep_bar2_addr = 0;
 unsigned long int ep_local_ddr_addr = 0;
 char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
+
+/* Inbound region structure */
+struct s32v_inbound_region inb1 = {
+    EP_BAR,			  	/* BAR2 by default */
+    UNDEFINED_DATA,		/* locally-mapped DDR on EP (target addr) */
+    0			  		/* region 0 */
+};
+
+/* Outbound region structure */
+struct s32v_outbound_region outb1 = {
+    UNDEFINED_DATA,  	  	/* target_addr, to be filled from handshake data */
+    S32V_PCIE_BASE_ADDR,    /* base_addr */
+    UNDEFINED_DATA, 		/* size >= 64K(min for PCIE on S32V), to be filled afterwards */
+    0,						/* region number */
+    0						/* region type = mem */
+};
+
+int pcie_init_inbound(int fd)
+{
+	int ret = 0;
+
+	inb1.target_addr = ep_local_ddr_addr;
+	ret = ioctl(fd, SETUP_INBOUND, &inb1);
+	return ret;
+}
+
+int pcie_init_outbound(unsigned long long int targ_addr, unsigned int buff_size, int fd)
+{
+    int ret = 0;
+
+    outb1.target_addr = targ_addr;
+    outb1.size = buff_size;
+
+    ret = ioctl(fd, SETUP_OUTBOUND, &outb1);
+    return ret;
+}
 
 unsigned long long int pcie_wait_for_rc(struct s32v_handshake *phandshake)
 {
