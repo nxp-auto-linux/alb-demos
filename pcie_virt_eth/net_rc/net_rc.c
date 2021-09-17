@@ -2,13 +2,13 @@
  * Copyright 2017, 2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
- * 
+ *
  * RootComplex code (LS2080A RDB/LS2084A BBMINI/S32V234 EVB)
  */
 
-//---------------------------------------------------------------------------
-// Included headers
-//---------------------------------------------------------------------------
+/*---------------------------------------------------------------------------
+ * Included headers
+ *---------------------------------------------------------------------------*/
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -39,20 +39,21 @@
 
 #include "../../pcie_common/include/pcie_handshake.h"
 
-// To check S32V234 EP config space (including BAR addresses):
-//
-// root@ls2080abluebox:~# cat /sys/bus/pci/devices/0000\:01\:00.0/resource
-// 0x0000001446000000 0x00000014460fffff 0x0000000000040200
-// 0x0000000000000000 0x0000000000000000 0x0000000000000000
-// 0x0000001446100000 0x00000014461fffff 0x0000000000040200
-// 0x0000001446211000 0x00000014462110ff 0x0000000000040200
-// 0x0000001446210000 0x0000001446210fff 0x0000000000040200
-// 0x0000001446200000 0x000000144620ffff 0x0000000000040200
-// 0x0000000000000000 0x0000000000000000 0x0000000000000000 
+/* To check S32V234 EP config space (including BAR addresses):
+ *
+ * root@ls2080abluebox:~# cat /sys/bus/pci/devices/0000\:01\:00.0/resource
+ * 0x0000001446000000 0x00000014460fffff 0x0000000000040200
+ * 0x0000000000000000 0x0000000000000000 0x0000000000000000
+ * 0x0000001446100000 0x00000014461fffff 0x0000000000040200
+ * 0x0000001446211000 0x00000014462110ff 0x0000000000040200
+ * 0x0000001446210000 0x0000001446210fff 0x0000000000040200
+ * 0x0000001446200000 0x000000144620ffff 0x0000000000040200
+ * 0x0000000000000000 0x0000000000000000 0x0000000000000000
+ */
 
-//------------------------------------------------------------------------------
-// Macros & Constants
-//------------------------------------------------------------------------------
+/*------------------------------------------------------------------------------
+ * Macros & Constants
+ *------------------------------------------------------------------------------*/
 
 //#define ENABLE_DUMP
 //#define LOG_VERBOSE
@@ -63,26 +64,26 @@
 #define LOG(...)
 #endif
 
-/// Poll mask for input
+/* Poll mask for input */
 const int POLL_INPUT  = (POLLIN | POLLPRI);
-/// Poll mask for error
+/* Poll mask for error */
 const int POLL_ERROR  = (POLLERR | POLLHUP | POLLNVAL);
 
-/// Number of files in poll array
+/* Number of files in poll array */
 #define POSIX_IF_CNT 1
-/// TAP file index for poll
+/* TAP file index for poll */
 #define POSIX_IF_TAP 0
 
 #define CMD1_PATTERN	0x42
 #define CMD3_PATTERN	0xC8
 #define CMD6_PATTERN	CMD1_PATTERN
 
-//------------------------------------------------------------------------------
-// Type definitions
-//------------------------------------------------------------------------------
+/*------------------------------------------------------------------------------
+ * Type definitions
+ *------------------------------------------------------------------------------*/
 
 #ifdef ENABLE_DUMP
-/// dump format selection
+/* Dump format selection */
 typedef enum {
   dumpHexOnly,
   dumpHexAscii
@@ -96,14 +97,13 @@ struct test_write_args {
 	ssize_t size;
 };
 
-#if 1
 /**
  * @brief memcpyW: memcpy which copies 4 byte at a time
  * @param dst  - target buffer start
  * @param src  - source buffer start
  * @param len  - number of words to copy
  * @return number of words copied
- **/
+ */
 int memcpyW(unsigned int *dst, unsigned int *src, int len)
 {
   int wcnt = 0;
@@ -113,11 +113,9 @@ int memcpyW(unsigned int *dst, unsigned int *src, int len)
   }
   return wcnt;
 }
-#endif
 
 /**
  * @brief Print llc-net usage information
- *
  */
 static void PrintUsage(void)
 {
@@ -137,7 +135,7 @@ static void PrintUsage(void)
  * @param buf  - start of buffer pointer
  * @param n    - maximum space in buffer
  * @return number of bytes read
- **/
+ */
 int cread(int fd, uint8_t *buf, int n){
 
   int nread;
@@ -157,7 +155,7 @@ int cread(int fd, uint8_t *buf, int n){
  * @param buf - start of buffer pointer
  * @param n   - number of bytes to be written
  * @return number of bytes written
- **/
+ */
 int cwrite(int fd, uint8_t *buf, int n){
 
   int nwrite;
@@ -215,7 +213,6 @@ int tun_alloc(char *dev, int flags) {
  * @param len   number of bytes to be dumped
  * @param header dump header
  * @param dForm  dump format [dumpHexOnly|dumpHexAscii]
- *
  */
 void dump_data(uint8_t *data, size_t len, char *header, tDumpFormat dForm)
 {
@@ -280,28 +277,28 @@ static int receive_msg(unsigned int *buf, unsigned int *mapDDR)
 {
     static unsigned int RecCount = 0;
     unsigned int pCount, tmp, len;
-  
+
     len = -1;
 
-    tmp    = mapDDR[MESSBUF_SIZE/4];  // previous acknowledge
+    tmp    = mapDDR[MESSBUF_SIZE/4];  /* previous acknowledge */
     pCount = tmp & 0xFFFF;
     if (tmp & ACK_FLAG) {
-      // sync counter
+      /* sync counter */
       RecCount = (pCount + 1) & 0xFFFF;
     }
-    // check if new packet arrived
+    /* check if new packet arrived */
     if (mapDDR[(MESSBUF_SIZE - 4)/4] == (RecCount + DONE_FLAG)) {
-      // we have data :)
+      /* we have data :) */
       if (memcmp((unsigned int *)&(mapDDR[1]), MAGIC_HEADER, 4) == 0) {
         int alignLen;
-        // the packet type we expect
-        len = mapDDR[2];                  // get length of payload
+        /* the packet type we expect */
+        len = mapDDR[2];                  /* get length of payload */
         alignLen = (len + 8) & 0xFFF8;
-        memcpy(buf, (unsigned int *)&(mapDDR[4]), alignLen);  // copy payload
+        memcpy(buf, (unsigned int *)&(mapDDR[4]), alignLen);  /* copy payload */
       }
-      // acknowledge packet
+      /* acknowledge packet */
       mapDDR[MESSBUF_SIZE/4] = RecCount + ACK_FLAG;
-    } else { 
+    } else {
       LOG("Message %x (%x)\n",  mapDDR[(MESSBUF_SIZE - 4)/4], RecCount);
       LOG("mapDDR %lx, messAddr %lx\n",
                 (long unsigned int) mapDDR,
@@ -309,7 +306,7 @@ static int receive_msg(unsigned int *buf, unsigned int *mapDDR)
 
       usleep(100);
     }
-    
+
     return len;
 }
 
@@ -324,27 +321,27 @@ static void send_msg(unsigned int *buf, int len, unsigned int *mapDDR)
   static unsigned int SendCount = 0;
   unsigned int __attribute__ ((aligned (8)))lbuf[MESSBUF_SIZE/4];
   int alignLen;
-  
+
   if (len > 0) {
     if (len > BUFSIZE) {
-      // should never happen !!!
+      /* should never happen !!! */
       fprintf(stderr, "send_msg: len > %d\n", BUFSIZE);
-      len = BUFSIZE; // just clip
+      len = BUFSIZE; /* just clip */
     }
-    *lbuf = (unsigned int) START_FLAG;  // write start flag 0x20000
+    *lbuf = (unsigned int) START_FLAG;  /* write start flag 0x20000 */
     memcpy(&(lbuf[1]), MAGIC_HEADER, 4);
     memcpy(&(lbuf[2]), &len, 4);
-    memcpy(&(lbuf[4]), buf, len); // move payload to safe location in buffer
+    memcpy(&(lbuf[4]), buf, len); /* move payload to safe location in buffer */
     alignLen = (len + 8 + 16) & 0xFFF8;
-    memcpy(mapDDR, lbuf, alignLen); // MESSBUF_SIZE); 
-    *mapDDR = SendCount + DONE_FLAG;    
-    
-    // wait until date is read by S32V
+    memcpy(mapDDR, lbuf, alignLen);
+    *mapDDR = SendCount + DONE_FLAG;
+
+    /* wait until date is read by EP */
     while (mapDDR[MESSBUF_SIZE/4] != (SendCount + ACK_FLAG)) {
         LOG("Got %x (%x)\n", mapDDR[MESSBUF_SIZE/4], SendCount);
 	usleep(100);
     }
-    SendCount = (SendCount + 1) & 0xFFFF;   // prevent flag overwrite 
+    SendCount = (SendCount + 1) & 0xFFFF; /* prevent flag overwrite */
   }
 }
 
@@ -352,7 +349,6 @@ static void send_msg(unsigned int *buf, int len, unsigned int *mapDDR)
  * @brief network through PCIe shared memory
  * @param Argc   command line argument count
  * @param ppArgv command line parameter list
- *
  */
 int main (int Argc, char **ppArgv)
 {
@@ -364,7 +360,7 @@ int main (int Argc, char **ppArgv)
   unsigned int  *mapPCIe;
   unsigned int  *src_buff;
   unsigned int  *dest_buff;
-  unsigned int  mapsize = MAP_DDR_SIZE;/* Use a default 1M value if no arg */
+  unsigned int  mapsize = MAP_DDR_SIZE; /* Use a default 1M value if no arg */
   int           C;
   struct pollfd FDs[POSIX_IF_CNT] = { {-1, } };
   char		if_name[IFNAMSIZ] = "tun1";
@@ -375,8 +371,8 @@ int main (int Argc, char **ppArgv)
   if (pcie_parse_rc_command_arguments(Argc, ppArgv,
       &rc_local_ddr_addr, &ep_bar2_addr, NULL))
     exit(1);
-		
-  // parse net_rc specific command line options using getopt() for POSIX compatibility
+
+  /* parse net_rc specific command line options using getopt() for POSIX compatibility */
   while ((C = getopt(Argc, ppArgv, "+h?i:" COMMON_COMMAND_ARGUMENTS)) != -1)
   {
     switch (C)
@@ -414,7 +410,7 @@ int main (int Argc, char **ppArgv)
   FDs[POSIX_IF_TAP].events = POLL_INPUT;
 
   printf("Successfully connected to network interface %s\n", if_name );
-  
+
   src_buff = (unsigned int *)malloc(mapsize);
   if (!src_buff) {
   	  printf(" Cannot allocate mem for source buffer\n");
@@ -444,7 +440,7 @@ int main (int Argc, char **ppArgv)
   	  goto err;
   } else {
   	  printf(" /dev/mem PCIe area mapping  OK\n");
-  }	  
+  }
 
   /* MAP DDR free 1M area. This was reserved at boot time */
   mapDDR = (unsigned int *)mmap(NULL, MAP_DDR_SIZE,
@@ -473,13 +469,13 @@ int main (int Argc, char **ppArgv)
 
   pidf = fork();
   if (pidf == 0) {
-    // child process
+    /* child process */
     goon = 1;
-    //Cnt  = 0;
+
     while (goon) {
       rlen = receive_msg(buffer, &mapDDR[REC_BASE/4]);
       if (rlen > 0) {
-      // data received from S32V
+      /* data received from EP */
       int nwrite;
 
 #ifdef ENABLE_DUMP
@@ -497,17 +493,17 @@ int main (int Argc, char **ppArgv)
       }
     }
   } else if (pidf > 0) {
-    // parent process
+    /* parent process */
     goon = 1;
-    //Cnt  = 0;
+
     while (goon) {
-      // Wait for an event on the MKx file descriptor
-      // poll() returns >0 if descriptor is readable, 0 if timeout, -1 if error
+      /* Wait for an event on the MKx file descriptor
+       * poll() returns >0 if descriptor is readable, 0 if timeout, -1 if error */
       int Data = poll(FDs, POSIX_IF_CNT, 200);
-      if (Data < 0) {	  // Error
+      if (Data < 0) {	  /* Error */
     	fprintf(stderr, "Poll error %d '%s'\n", errno, strerror(errno));
     	goon = 0;
-      } 
+      }
       if (Data > 0) {
     	if (FDs[POSIX_IF_TAP].revents & POLL_INPUT) {
     	  int nread;
@@ -516,15 +512,15 @@ int main (int Argc, char **ppArgv)
 #ifdef ENABLE_DUMP
     	  dump_data((uint8_t *)buffer, nread, "From TAP interface to EP\n", dumpHexOnly);
 #endif
-    	  // sent to S32v
-    	  send_msg(buffer, nread, mapDDR); // data copied in transmitt buffer
+    	  /* sent to EP */
+    	  send_msg(buffer, nread, mapDDR); /* data copied in transmitt buffer */
     	}
       }
     }
   } else {
      fprintf(stderr, "Fork failed, stopping program\n");
   }
-  
+
 err :
 	close(fd1);
 	close(tapFd);

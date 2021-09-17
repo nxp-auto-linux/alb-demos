@@ -6,9 +6,9 @@
  * EndPoint code (S32V234 PCIE/BBMINI)
  */
 
-//---------------------------------------------------------------------------
-// Included headers
-//---------------------------------------------------------------------------
+/*---------------------------------------------------------------------------
+ * Included headers
+ *---------------------------------------------------------------------------*/
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -42,21 +42,21 @@
 #include "../../pcie_common/include/pcie_ep_addr.h"
 #include "../../pcie_common/include/pcie_handshake.h"
 
-//------------------------------------------------------------------------------
-// Macros & Constants
-//------------------------------------------------------------------------------
+/*------------------------------------------------------------------------------
+ * Macros & Constants
+ *------------------------------------------------------------------------------*/
 // #define ENABLE_DMA
 //#define ENABLE_DUMP
 //#define LOG_VERBOSE
 
-/// Poll mask for input
+/* Poll mask for input */
 const int POLL_INPUT  = (POLLIN | POLLPRI);
-/// Poll mask for error
+/* Poll mask for error */
 const int POLL_ERROR  = (POLLERR | POLLHUP | POLLNVAL);
 
-/// Number of files in poll array
+/* Number of files in poll array */
 #define POSIX_IF_CNT 1
-/// TAP file index for poll
+/* TAP file index for poll */
 #define POSIX_IF_TAP 0
 
 #define CMD1_PATTERN	0x12
@@ -71,12 +71,12 @@ const int POLL_ERROR  = (POLLERR | POLLHUP | POLLNVAL);
 
 #define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
 
-//------------------------------------------------------------------------------
-// Type definitions
-//------------------------------------------------------------------------------
+/*------------------------------------------------------------------------------
+ * Type definitions
+ *------------------------------------------------------------------------------*/
 
 #ifdef ENABLE_DUMP
-/// dump format selection
+/* dump format selection */
 typedef enum {
   dumpHexOnly,
   dumpHexAscii
@@ -92,7 +92,6 @@ struct test_write_args {
 
 /**
  * @brief Print llc-net usage information
- *
  */
 static void PrintUsage(void)
 {
@@ -114,7 +113,7 @@ struct sigaction action;
 /**
  * @brief signal_handler for DMA transfer end
  * @param signum - received signal, only handles SIGUSR1
- **/
+ */
 void signal_handler(int signum)
 {
   if (signum == SIGUSR1) {
@@ -150,7 +149,7 @@ void dmaCpy(unsigned int *dst, unsigned int *src, int len, int fd1)
  * @param buf  - start of buffer pointer
  * @param n    - maximum space in buffer
  * @return number of bytes read
- **/
+ */
 int cread(int fd, uint8_t *buf, int n){
 
   int nread;
@@ -170,7 +169,7 @@ int cread(int fd, uint8_t *buf, int n){
  * @param buf - start of buffer pointer
  * @param n   - number of bytes to be written
  * @return number of bytes written
- **/
+ */
 int cwrite(int fd, uint8_t *buf, int n){
 
   int nwrite;
@@ -227,7 +226,6 @@ int tun_alloc(char *dev, int flags) {
  * @param len   number of bytes to be dumped
  * @param header dump header
  * @param dForm  dump format [dumpHexOnly|dumpHexAscii]
- *
  */
 void dump_data(uint8_t *data, size_t len, char *header, tDumpFormat dForm)
 {
@@ -301,26 +299,26 @@ static int receive_msg_ls2(uint8_t *buf, unsigned int *src_buff, unsigned int *m
   tmp	 = src_buff[MESSBUF_SIZE/4];
   pCount = tmp & 0xFFFF;
   if (tmp & ACK_FLAG) {
-    // sync counter
+    /* sync counter */
     RecCount = (pCount + 1) & 0xFFFF;
   }
-  // check if new packet arrived
+  /* check if new packet arrived */
   memcpy((unsigned int *)(src_buff),
          (unsigned int *)(mapPCIe), 4);
   
   if (*src_buff == (RecCount + DONE_FLAG)) {
-    // we have data :)
+    /* we have data :) */
 #ifndef ENABLE_DMA
     memcpy((unsigned int *)(src_buff), (unsigned int *)(mapPCIe), MESSBUF_SIZE);
 #else
     dmaCpy((unsigned int *)(src_buff), (unsigned int *)(mapPCIe), MESSBUF_SIZE, fd1);
 #endif     
     if (memcmp(&(src_buff[1]), MAGIC_HEADER, 4) == 0) {
-      // the packet type we expect
-      len = src_buff[2];		  // get length of payload
-      memcpy(buf, &(src_buff[4]), len);  // copy payload
+      /* the packet type we expect */
+      len = src_buff[2];		  /* get length of payload */
+      memcpy(buf, &(src_buff[4]), len);  /* copy payload */
     }
-    // acknowledge packet and transferr to LS2
+    /* acknowledge packet and transferr to LS2 */
     src_buff[MESSBUF_SIZE/4] = RecCount + ACK_FLAG;
     memcpy((unsigned int *)&mapPCIe[MESSBUF_SIZE/4],
            (unsigned int *)&src_buff[MESSBUF_SIZE/4], 4);
@@ -347,27 +345,27 @@ static void send_msg_ls2(uint8_t *buf, int len, unsigned int *dest_buff, unsigne
   
   if (len > 0) {
     if (len > BUFSIZE) {
-      // should never happen !!!
+      /* should never happen !!! */
       fprintf(stderr, "send_msg: len > %d\n", BUFSIZE);
-      len = BUFSIZE; // just clip
+      len = BUFSIZE; /* just clip */
     }
-    // make sure a previous count ACK is available
+    /* make sure a previous count ACK is available */
     dest_buff[MESSBUF_SIZE/4] = ((SendCount - 1) & 0xFFFF) + ACK_FLAG; 
     memcpy((unsigned int *)&mapPCIe[MESSBUF_SIZE/4],
     	   (unsigned int *)&dest_buff[MESSBUF_SIZE/4], 4);
-    *dest_buff = (unsigned int) START_FLAG;  // write start flag 0x20000
+    *dest_buff = (unsigned int) START_FLAG;  /* write start flag 0x20000 */
     memcpy(&(dest_buff[1]), MAGIC_HEADER, 4);
     memcpy(&(dest_buff[2]), &len, 4);
-    memcpy(&(dest_buff[4]), buf, len); // move payload to safe location in buffer
+    memcpy(&(dest_buff[4]), buf, len); /* move payload to safe location in buffer */
     dest_buff[(MESSBUF_SIZE - 4)/4] = SendCount + DONE_FLAG;
-    // transfer data to LS2
+    /* transfer data to RC */
 #ifndef ENABLE_DMA
     memcpy((unsigned int *)mapPCIe, (unsigned int *) dest_buff, MESSBUF_SIZE + 8);
 #else
     dmaCpy((unsigned int *)mapPCIe, (unsigned int *) dest_buff, MESSBUF_FULL, fd1);
 #endif
     LOG("Send to %lx\n", (long unsigned int) mapPCIe);
-    // wait until date is read by LS2
+    /* wait until date is read by RC */
     gotit = 0;
     while (!gotit) {
        memcpy((unsigned int *)&dest_buff[MESSBUF_SIZE/4],
@@ -379,7 +377,7 @@ static void send_msg_ls2(uint8_t *buf, int len, unsigned int *dest_buff, unsigne
     	 usleep(100);
        }
     }
-    SendCount = (SendCount + 1) & 0xFFFF;   // prevent flag overwrite 
+    SendCount = (SendCount + 1) & 0xFFFF;   /* prevent flag overwrite */
   }
 }
 
@@ -389,7 +387,6 @@ extern unsigned long int ep_local_ddr_addr;
  * @brief network through PCIe shared memory
  * @param Argc   command line argument count
  * @param ppArgv command line parameter list
- *
  */
 int main (int Argc, char **ppArgv)
 {
@@ -413,7 +410,7 @@ int main (int Argc, char **ppArgv)
       &ep_local_ddr_addr, NULL))
     exit(1);
 
-  // parse command line options using getopt() for POSIX compatibility
+  /* parse command line options using getopt() for POSIX compatibility */
   while ((C = getopt(Argc, ppArgv, "+h?i:" COMMON_COMMAND_ARGUMENTS)) != -1)
   {
     switch (C)
@@ -531,13 +528,13 @@ int main (int Argc, char **ppArgv)
   
   pidf = fork();
   if (pidf == 0) {
-    // child process
+    /* child process */
     goon = 1;
-    //Cnt  = 0;
+
     while (goon) {
       rlen = receive_msg_ls2(buffer, dest_buff, mapPCIe, fd1);
       if (rlen > 0) {
-        // data received from LS2
+        /* data received from RC */
         int nwrite;
 
 #ifdef ENABLE_DUMP
@@ -555,14 +552,14 @@ int main (int Argc, char **ppArgv)
       }
     }
   } else if (pidf > 0) {
-    // parent process
+    /* parent process */
     goon = 1;
-    //Cnt  = 0;
+
     while (goon) {
-      // Wait for an event on the MKx file descriptor
-      // poll() returns >0 if descriptor is readable, 0 if timeout, -1 if error
+      /* Wait for an event on the MKx file descriptor
+       * poll() returns >0 if descriptor is readable, 0 if timeout, -1 if error */
       int Data = poll(FDs, POSIX_IF_CNT, 200);
-      if (Data < 0) {	  // Error
+      if (Data < 0) {	  /* Error */
     	fprintf(stderr, "Poll error %d '%s'\n", errno, strerror(errno));
     	goon = 0;
       } 
@@ -574,8 +571,9 @@ int main (int Argc, char **ppArgv)
 #ifdef ENABLE_DUMP
     	  dump_data(buffer, nread, "From TAP interface to PCIe RC\n", dumpHexOnly);
 #endif
-    	  // sent to LS2
-    	  send_msg_ls2(buffer, nread, src_buff, &mapPCIe[REC_BASE/4], fd1); // data copied in transmitt buffer
+    	  /* send to RC
+    	   * data copied in transmit buffer */
+    	  send_msg_ls2(buffer, nread, src_buff, &mapPCIe[REC_BASE/4], fd1);
 #ifdef ENABLE_DUMP
     	  printf("Done\n");
 #endif
