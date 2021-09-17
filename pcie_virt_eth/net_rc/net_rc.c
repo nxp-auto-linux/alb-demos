@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2021 NXP
+ * Copyright 2017, 2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  * 
@@ -348,9 +348,6 @@ static void send_msg(unsigned int *buf, int len, unsigned int *mapDDR)
   }
 }
 
-extern unsigned long int ep_bar2_addr;
-extern unsigned long int rc_local_ddr_addr;
-
 /**
  * @brief network through PCIe shared memory
  * @param Argc   command line argument count
@@ -372,8 +369,11 @@ int main (int Argc, char **ppArgv)
   struct pollfd FDs[POSIX_IF_CNT] = { {-1, } };
   char		if_name[IFNAMSIZ] = "tun1";
   unsigned int  __attribute__ ((aligned (8))) buffer[BUFSIZE/4];
+  unsigned long int ep_bar2_addr = 0;
+  unsigned long int rc_local_ddr_addr = 0;
 
-  if (pcie_parse_command_arguments(Argc, ppArgv))
+  if (pcie_parse_rc_command_arguments(Argc, ppArgv,
+      &rc_local_ddr_addr, &ep_bar2_addr, NULL))
     exit(1);
 		
   // parse net_rc specific command line options using getopt() for POSIX compatibility
@@ -461,7 +461,8 @@ int main (int Argc, char **ppArgv)
 
   /* Connect to EP and send RC_DDR_ADDR */
   printf("Connecting to EP\n");
-  if (pcie_notify_ep((struct s32v_handshake *)mapPCIe) < 0) {
+  if (pcie_notify_ep((struct s32v_handshake *)mapPCIe,
+        rc_local_ddr_addr) < 0) {
       perror("Unable to send RC_DDR_ADDR to EP");
       goto err;
   }

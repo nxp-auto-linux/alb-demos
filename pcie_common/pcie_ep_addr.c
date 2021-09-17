@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 NXP
+ * Copyright 2018, 2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  * 
@@ -11,15 +11,11 @@
 #include "include/pcie_ops.h"
 #include "include/pcie_handshake.h"
 
-#include <sys/ioctl.h> /* ioctl() */
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-unsigned long int ep_bar2_addr = 0;
-unsigned long int ep_local_ddr_addr = 0;
-char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 
 /* Inbound region structure */
 struct s32v_inbound_region inb1 = {
@@ -37,7 +33,7 @@ struct s32v_outbound_region outb1 = {
     0						/* region type = mem */
 };
 
-int pcie_init_inbound(int fd)
+int pcie_init_inbound(unsigned long int ep_local_ddr_addr, int fd)
 {
 	int ret = 0;
 
@@ -46,7 +42,8 @@ int pcie_init_inbound(int fd)
 	return ret;
 }
 
-int pcie_init_outbound(unsigned long long int targ_addr, unsigned int buff_size, int fd)
+int pcie_init_outbound(unsigned long long int targ_addr,
+	unsigned int buff_size, int fd)
 {
     int ret = 0;
 
@@ -69,27 +66,37 @@ unsigned long long int pcie_wait_for_rc(struct s32v_handshake *phandshake)
     return phandshake->rc_ddr_addr;
 }
 
-int pcie_parse_command_arguments(int argc, char *argv[])
+int pcie_parse_ep_command_arguments(int argc, char *argv[],
+	unsigned long int *ep_local_ddr_addr,
+	char *batch_commands)
 {
 	char *ep_local_ddr_addr_str = NULL;
 	int c;
+
+	if (!ep_local_ddr_addr) {
+		fprintf(stderr, "Invalid arguments\n");
+		return -1;
+	}
 
 	while ((c = getopt (argc, argv, COMMON_COMMAND_ARGUMENTS)) != -1)
 		switch (c) {
 		  case 'a':
 			ep_local_ddr_addr_str = optarg;
-			ep_local_ddr_addr = strtoul(ep_local_ddr_addr_str, NULL, 16);
+			*ep_local_ddr_addr = strtoul(ep_local_ddr_addr_str, NULL, 16);
 			break;
 		  case 'e':
 			printf("Argument \"-e\" does not apply to EndPoint\n");
 			break;
 		  case 'c':
-			strncpy(batch_commands, optarg, MAX_BATCH_COMMANDS);
+			if (batch_commands)
+				strncpy(batch_commands, optarg, MAX_BATCH_COMMANDS);
+			else
+				fprintf(stderr, "Unsupported option '-c'\n");
 			break;
 		}
 
 	batch_commands[MAX_BATCH_COMMANDS] = 0;
-	if (ep_local_ddr_addr)
+	if (*ep_local_ddr_addr)
 		return 0;
 
 	return 1;

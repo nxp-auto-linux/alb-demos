@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 NXP
+ * Copyright 2018, 2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  * 
@@ -25,9 +25,16 @@ unsigned long long int pcie_wait_for_rc(struct s32v_handshake *phandshake);
 /* Handshake function which sends the RC DDR base address to the EP
    To be called from the RC side
  */
-int pcie_notify_ep(struct s32v_handshake *phandshake);
+int pcie_notify_ep(struct s32v_handshake *phandshake,
+	unsigned long int rc_local_ddr_addr);
 
-/* Helper function for parsing command line arguments and setting
+/* Helper functions for parsing command line arguments and setting
    the internal address variables needed for the handshake
  */
-int pcie_parse_command_arguments(int argc, char *argv[]);
+int pcie_parse_rc_command_arguments(int argc, char *argv[],
+	unsigned long int *rc_local_ddr_addr,
+	unsigned long int *ep_bar2_addr,
+	char *batch_commands);
+int pcie_parse_ep_command_arguments(int argc, char *argv[],
+	unsigned long int *ep_local_ddr_addr,
+	char *batch_commands);

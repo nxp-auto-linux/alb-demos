@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2021 NXP
+ * Copyright 2016, 2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  */
@@ -62,9 +62,6 @@ static void *loop_pcie_write(void *va)
 	return NULL;
 }
 
-extern unsigned long int ep_local_ddr_addr;
-extern char batch_commands[];
-
 int main(int argc, char *argv[])
 {
 	int fd1;
@@ -93,11 +90,14 @@ int main(int argc, char *argv[])
 	char word[256];
 	int pid;
 	int batch_idx = 0;
+	unsigned long int ep_local_ddr_addr = 0;
+	char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 	
 	/* Struct for DMA ioctl */
 	struct dma_data_elem dma_single = {0,0,0,0,0,0};
 
-	if (pcie_parse_command_arguments(argc, argv)) {
+	if (pcie_parse_ep_command_arguments(argc, argv,
+			&ep_local_ddr_addr, batch_commands)) {
 		printf("\nUsage:\n%s -a <ep_local_ddr_addr_hex> [-c <commands>]\n\n", argv[0]);
 		printf("E.g. for BBMini (S32V234):\n %s -a 0xC1100000\n\n", argv[0]);
 		exit(1);
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 	}
 	
 	/* Setup inbound window for receiving data into local shared buffer */
-	ret = pcie_init_inbound(fd1);
+	ret = pcie_init_inbound(ep_local_ddr_addr, fd1);
 	if (ret < 0) {
 	    perror("Error while setting inbound region");
 	    goto err;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2021 NXP
+ * Copyright 2017, 2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  * 
@@ -407,8 +407,10 @@ int main (int Argc, char **ppArgv)
   struct pollfd FDs[POSIX_IF_CNT] = { {-1, } };
   char		if_name[IFNAMSIZ] = "tun1";
   uint8_t       buffer[BUFSIZE];
+  unsigned long int ep_local_ddr_addr = 0;
 
-  if (pcie_parse_command_arguments(Argc, ppArgv))
+  if (pcie_parse_ep_command_arguments(Argc, ppArgv,
+      &ep_local_ddr_addr, NULL))
     exit(1);
 
   // parse command line options using getopt() for POSIX compatibility
@@ -502,7 +504,7 @@ int main (int Argc, char **ppArgv)
   }
 
   /* Setup inbound window for receiving data into local shared buffer */
-  ret = pcie_init_inbound(fd1);
+  ret = pcie_init_inbound(ep_local_ddr_addr, fd1);
   if (ret < 0) {
       perror("Error while setting inbound region");
       goto err;

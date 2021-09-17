@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2021 NXP
+ * Copyright 2016, 2021 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  */
@@ -42,10 +42,6 @@ static void *loop_pcie_write(void *va)
 	return NULL;
 }
 
-extern unsigned long int ep_bar2_addr;
-extern unsigned long int rc_local_ddr_addr;
-extern char batch_commands[];
-
 int main(int argc, char *argv[])
 {
 	int fd1;
@@ -71,11 +67,15 @@ int main(int argc, char *argv[])
 	unsigned short int go1 = 0;
 	unsigned short int go2 = 0;
 	char word[256];
+	unsigned long int ep_bar2_addr = 0;
+	unsigned long int rc_local_ddr_addr = 0;
+	char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 	int batch_idx = 0;
 
 	struct timespec tps;
 	
-	if (pcie_parse_command_arguments(argc, argv)) {
+	if (pcie_parse_rc_command_arguments(argc, argv,
+			&rc_local_ddr_addr, &ep_bar2_addr, batch_commands)) {
 		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar2_addr_hex> [-c <commands>]\n\n", argv[0]);
 		printf("E.g. for BBMini (LS2084A):\n %s -a 0x8080100000 -e 0x3840100000\n\n", argv[0]);
 		exit(1);
@@ -126,7 +126,8 @@ int main(int argc, char *argv[])
 
 	/* Connect to EP and send RC_DDR_ADDR */
 	printf("\n Connecting to EP\n");
-	if (pcie_notify_ep((struct s32v_handshake *)mapPCIe) < 0) {
+	if (pcie_notify_ep((struct s32v_handshake *)mapPCIe,
+			rc_local_ddr_addr) < 0) {
 	    perror("Unable to send RC local DDR address to EP");
 	    goto err;
 	}

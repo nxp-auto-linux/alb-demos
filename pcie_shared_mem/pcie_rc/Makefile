@@ -1,5 +1,5 @@
 #
-# Copyright 2016-2018 NXP
+# Copyright 2016, 2018 NXP
 #
 
 LDFLAGS	+= -lpthread

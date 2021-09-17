@@ -5,7 +5,7 @@
  * Copyright (C) 2013 Kosagi
  *              http://www.kosagi.com
  * Copyright (C) 2014-2015 Freescale Semiconductor, Inc. All Rights Reserved.
- * Copyright 2016-2021 NXP
+ * Copyright 2016, 2021 NXP
  *
  * Author: Sean Cross <xobs@kosagi.com>
  *
