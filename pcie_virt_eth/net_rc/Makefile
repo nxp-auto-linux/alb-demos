@@ -4,7 +4,7 @@
 # SPDX-License-Identifier:     GPL-2.0+
 #
 
-CFLAGS	+= -g -O3
+CFLAGS	+= -g -O3 -I../../pcie_common/include
 
 LDFLAGS	+= -lpthread
 OBJ	:= ../../pcie_common/pcie_rc_addr.o net_rc.o

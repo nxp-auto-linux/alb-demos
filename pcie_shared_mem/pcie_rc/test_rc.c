@@ -15,7 +15,7 @@
 #include <pthread.h>
 #include <sys/mman.h>
 
-#include "../../pcie_common/include/pcie_handshake.h"
+#include "pcie_handshake.h"
 
 #define CMD1_PATTERN	0x42
 #define CMD3_PATTERN	0xC8

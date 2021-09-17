@@ -37,10 +37,10 @@
 #include <linux/serial.h>
 #include <ctype.h>
 
-#include "../net_rc/netComm.h"
-#include "../../pcie_common/include/pcie_ops.h"
-#include "../../pcie_common/include/pcie_ep_addr.h"
-#include "../../pcie_common/include/pcie_handshake.h"
+#include "netComm.h"
+#include "pcie_ops.h"
+#include "pcie_ep_addr.h"
+#include "pcie_handshake.h"
 
 /*------------------------------------------------------------------------------
  * Macros & Constants

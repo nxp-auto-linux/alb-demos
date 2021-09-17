@@ -3,6 +3,9 @@
 #
 
 LDFLAGS	+= -lpthread
+
+CFLAGS	+= -g -I../../pcie_common/include
+
 OBJ	:= ../../pcie_common/pcie_rc_addr.o test_rc.o
 EXE	:= test_rc
 

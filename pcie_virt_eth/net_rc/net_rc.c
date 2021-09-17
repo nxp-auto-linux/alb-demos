@@ -37,7 +37,7 @@
 #include <ctype.h>
 #include "netComm.h"
 
-#include "../../pcie_common/include/pcie_handshake.h"
+#include "pcie_handshake.h"
 
 /* To check S32V234 EP config space (including BAR addresses):
  *

@@ -6,7 +6,7 @@
 
 # LDFLAGS	+= -lpthread
 
-CFLAGS	+= -g -O3
+CFLAGS	+= -g -O3 -I../../pcie_common/include -I../net_rc
 
 OBJ	+= ../../pcie_common/pcie_ep_addr.o net_ep.o
 DEPS	:= pcie_ops.h pcie_ep_addr.h

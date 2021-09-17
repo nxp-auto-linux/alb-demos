@@ -18,9 +18,9 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 
-#include "../../pcie_common/include/pcie_ops.h"
-#include "../../pcie_common/include/pcie_ep_addr.h"
-#include "../../pcie_common/include/pcie_handshake.h"
+#include "pcie_ops.h"
+#include "pcie_ep_addr.h"
+#include "pcie_handshake.h"
 
 #define CMD1_PATTERN	0x12
 #define CMD3_PATTERN	0x67
