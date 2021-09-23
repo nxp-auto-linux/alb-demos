@@ -381,8 +381,6 @@ static void send_msg_ls2(uint8_t *buf, int len, unsigned int *dest_buff, unsigne
   }
 }
 
-extern unsigned long int ep_local_ddr_addr;
-
 /**
  * @brief network through PCIe shared memory
  * @param Argc   command line argument count
@@ -404,10 +402,11 @@ int main (int Argc, char **ppArgv)
   struct pollfd FDs[POSIX_IF_CNT] = { {-1, } };
   char		if_name[IFNAMSIZ] = "tun1";
   uint8_t       buffer[BUFSIZE];
+  unsigned long int ep_pcie_base_address = 0;
   unsigned long int ep_local_ddr_addr = 0;
 
   if (pcie_parse_ep_command_arguments(Argc, ppArgv,
-      &ep_local_ddr_addr, NULL))
+      &ep_pcie_base_address, &ep_local_ddr_addr, NULL))
     exit(1);
 
   /* parse command line options using getopt() for POSIX compatibility */
@@ -478,7 +477,7 @@ int main (int Argc, char **ppArgv)
   mapDDR = mmap(NULL, MAP_DDR_SIZE,
   		  PROT_READ | PROT_WRITE,
   		  MAP_SHARED, fd2, ep_local_ddr_addr);
-  printf(" EP_LOCAL_DDR_ADDR = %lx, mapDDR = %lx\n",
+  printf(" EP local DDR address = %lx, mapDDR = %lx\n",
   	  ep_local_ddr_addr, (long unsigned int) mapDDR);
   if (!mapDDR) {
   	  perror("/dev/mem DDR area mapping FAILED");
@@ -490,9 +489,9 @@ int main (int Argc, char **ppArgv)
   /* Map PCIe area */
   mapPCIe = mmap(NULL, MAP_DDR_SIZE,
   		  PROT_READ | PROT_WRITE,
-  		  MAP_SHARED, fd2, S32V_PCIE_BASE_ADDR);
-  printf(" S32V_PCIE_BASE_ADDR = %x, mapPCIe = %lx\n",
-  	 S32V_PCIE_BASE_ADDR, (long unsigned int) mapPCIe);
+  		  MAP_SHARED, fd2, ep_pcie_base_address);
+  printf(" PCIe base address = %lx, mapPCIe = %lx\n",
+  	 ep_pcie_base_address, (long unsigned int) mapPCIe);
   if (!mapPCIe) {
   	  perror("/dev/mem PCIe area mapping FAILED");
   	  goto err;
@@ -511,10 +510,11 @@ int main (int Argc, char **ppArgv)
 
   printf("Connecting to RC...\n");
   rc_ddr_addr = pcie_wait_for_rc((struct s32v_handshake *)mapDDR);
-  printf(" RC_DDR_ADDR = %lx\n", rc_ddr_addr);
+  printf(" RC DDR address = %lx\n", rc_ddr_addr);
 
   /* Setup outbound window for accessing RC mem */
-  ret = pcie_init_outbound(rc_ddr_addr, MESSBUF_LONG, fd1);
+  ret = pcie_init_outbound(ep_pcie_base_address,
+        rc_ddr_addr, MESSBUF_LONG, fd1);
   if (ret < 0) {
   	  perror("Error while setting outbound region");
   	  goto err;

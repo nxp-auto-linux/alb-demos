@@ -90,6 +90,7 @@ int main(int argc, char *argv[])
 	char word[256];
 	int pid;
 	int batch_idx = 0;
+	unsigned long int ep_pcie_base_address = 0;
 	unsigned long int ep_local_ddr_addr = 0;
 	char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 	
@@ -97,12 +98,13 @@ int main(int argc, char *argv[])
 	struct dma_data_elem dma_single = {0,0,0,0,0,0};
 
 	if (pcie_parse_ep_command_arguments(argc, argv,
-			&ep_local_ddr_addr, batch_commands)) {
-		printf("\nUsage:\n%s -a <ep_local_ddr_addr_hex> [-c <commands>]\n\n", argv[0]);
+			&ep_pcie_base_address, &ep_local_ddr_addr, batch_commands)) {
+		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-c <commands>]\n\n", argv[0]);
 		printf("E.g. for BBMini (S32V234):\n %s -a 0xC1100000\n\n", argv[0]);
 		exit(1);
 	}
 
+	printf ("EP local PCIe base address = 0x%lX\n", ep_pcie_base_address);
 	printf ("EP local DDR address = 0x%lX\n", ep_local_ddr_addr);
 
 	/* Set handler for SIGUSR */
@@ -145,7 +147,7 @@ int main(int argc, char *argv[])
 	/* Map PCIe area */
 	mapPCIe = mmap(NULL, MAP_DDR_SIZE,
 			PROT_READ | PROT_WRITE,
-			MAP_SHARED, fd2, S32V_PCIE_BASE_ADDR);
+			MAP_SHARED, fd2, ep_pcie_base_address);
 	if (!mapPCIe) {
 		perror("/dev/mem PCIe area mapping FAILED");
 		goto err;
@@ -167,7 +169,8 @@ int main(int argc, char *argv[])
 	printf(" RC_DDR_ADDR = %lx", rc_ddr_addr);
 
 	/* Setup outbound window for accessing RC mem */
-	ret = pcie_init_outbound(rc_ddr_addr, MAP_DDR_SIZE, fd1);
+	ret = pcie_init_outbound(ep_pcie_base_address,
+		rc_ddr_addr, MAP_DDR_SIZE, fd1);
 	if (ret < 0) {
 		perror("Error while setting outbound region");
 	  	goto err;
@@ -355,7 +358,7 @@ start:
 		dma_flag = 0;
 		dma_single.size = mapsize;
 		dma_single.sar = ep_local_ddr_addr;
-		dma_single.dar = S32V_PCIE_BASE_ADDR;
+		dma_single.dar = ep_pcie_base_address;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_WRITE_ELEM | DMA_FLAG_EN_DONE_INT | DMA_FLAG_LIE);
 		
@@ -378,7 +381,7 @@ start:
 		dma_single.flags = 0;
 		dma_flag = 0;
 		dma_single.size = mapsize;
-		dma_single.sar = S32V_PCIE_BASE_ADDR;
+		dma_single.sar = ep_pcie_base_address;
 		dma_single.dar = ep_local_ddr_addr;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_READ_ELEM | DMA_FLAG_EN_DONE_INT  | DMA_FLAG_LIE);

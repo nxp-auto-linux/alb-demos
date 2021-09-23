@@ -27,7 +27,7 @@ struct s32v_inbound_region inb1 = {
 /* Outbound region structure */
 struct s32v_outbound_region outb1 = {
     UNDEFINED_DATA,  	  	/* target_addr, to be filled from handshake data */
-    S32V_PCIE_BASE_ADDR,    /* base_addr */
+    UNDEFINED_DATA,         /* base_addr, to be filled afterwards */
     UNDEFINED_DATA, 		/* size >= 64K(min for PCIE on S32V), to be filled afterwards */
     0,						/* region number */
     0						/* region type = mem */
@@ -42,11 +42,13 @@ int pcie_init_inbound(unsigned long int ep_local_ddr_addr, int fd)
 	return ret;
 }
 
-int pcie_init_outbound(unsigned long long int targ_addr,
+int pcie_init_outbound(unsigned long long int base_address,
+	unsigned long long int targ_addr,
 	unsigned int buff_size, int fd)
 {
     int ret = 0;
 
+	outb1.base_addr = base_address;
     outb1.target_addr = targ_addr;
     outb1.size = buff_size;
 
@@ -67,9 +69,11 @@ unsigned long long int pcie_wait_for_rc(struct s32v_handshake *phandshake)
 }
 
 int pcie_parse_ep_command_arguments(int argc, char *argv[],
+	unsigned long int *ep_pcie_base_address,
 	unsigned long int *ep_local_ddr_addr,
 	char *batch_commands)
 {
+	char *ep_pcie_base_address_str = NULL;
 	char *ep_local_ddr_addr_str = NULL;
 	int c;
 
@@ -84,6 +88,10 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 			ep_local_ddr_addr_str = optarg;
 			*ep_local_ddr_addr = strtoul(ep_local_ddr_addr_str, NULL, 16);
 			break;
+		  case 'b':
+			ep_pcie_base_address_str = optarg;
+			*ep_pcie_base_address = strtoul(ep_pcie_base_address_str, NULL, 16);
+			break;
 		  case 'e':
 			printf("Argument \"-e\" does not apply to EndPoint\n");
 			break;
@@ -96,7 +104,7 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 		}
 
 	batch_commands[MAX_BATCH_COMMANDS] = 0;
-	if (*ep_local_ddr_addr)
+	if (*ep_local_ddr_addr && *ep_pcie_base_address)
 		return 0;
 
 	return 1;

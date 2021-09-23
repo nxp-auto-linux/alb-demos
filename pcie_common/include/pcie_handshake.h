@@ -9,7 +9,7 @@
 #define UNDEFINED_DATA 	0x0
 #define DEFAULT_TIMEOUT_US 10000
 
-#define COMMON_COMMAND_ARGUMENTS "a:e:c:"
+#define COMMON_COMMAND_ARGUMENTS "a:b:e:c:"
 #define MAX_BATCH_COMMANDS 10
 
 /* A small buffer used for getting the RootComplex's DDR base address */
@@ -36,5 +36,6 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 	unsigned long int *ep_bar2_addr,
 	char *batch_commands);
 int pcie_parse_ep_command_arguments(int argc, char *argv[],
+	unsigned long int *ep_pcie_base_address,
 	unsigned long int *ep_local_ddr_addr,
 	char *batch_commands);
