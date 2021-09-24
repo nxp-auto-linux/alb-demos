@@ -197,14 +197,14 @@ start:
 	cmd = 0xFF;
 
 	printf("\n Test cases : \
-	\n 1. Single 1M Write transfer from local buffer to LS_RC DDR mem (pattern=%#x)\
-	\n 2. Single 1M Read transfer from LS_RC DDR mem to local buffer\
-	\n 3. Variable size throughput test Write(pattern = %#x) + Read to/from LS_RC DDR mem\
+	\n 1. Single 1M Write transfer from local buffer to RC DDR mem (pattern=%#x)\
+	\n 2. Single 1M Read transfer from RC DDR mem to local buffer\
+	\n 3. Variable size throughput test Write(pattern = %#x) + Read to/from RC DDR mem\
 	\n 4. Fill local DDR_BASE + 1M with pattern 0xdeadbeef\
-	\n 6. Write 1M from local DDR to LS_RC DDR mem through DMA single transfer\
-	\n 7. Read 1M from LS_RC DDR mem to local DDR through DMA single transfer\
-	\n 8. Multiple 1M Write transfers from local buffer to LS_RC DDR mem (pattern=%#x)\
 	\n 5. Read and print first and last 8DW(32bytes) bytes in local DDR\
+	\n 6. Write 1M from local DDR to RC DDR mem through DMA single transfer\
+	\n 7. Read 1M from RC DDR mem to local DDR through DMA single transfer\
+	\n 8. Multiple 1M Write transfers from local buffer to RC DDR mem (pattern=%#x)\
 	\n    This is essentially the same as #1, only looped and multithreaded.\
 	\n    Usable for performance tests and some errata validation.\
 	\n 9. Exit app\

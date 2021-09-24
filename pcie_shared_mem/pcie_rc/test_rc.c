@@ -140,12 +140,12 @@ start :
 	cmd = 0xFF;
 
 	printf("\n Test cases :\
-	\n 1. Single 1M Write transfer from local buffer to S32V_EP mem (pattern = %#x)\
-	\n 2. Single 1M Read  transfer from S32V_EP mem to local buffer\
-	\n 3. Variable size throughput test Write(pattern = %#x) + Read to/from S32V_EP mem\
+	\n 1. Single 1M Write transfer from local buffer to EP mem (pattern = %#x)\
+	\n 2. Single 1M Read  transfer from EP mem to local buffer\
+	\n 3. Variable size throughput test Write(pattern = %#x) + Read to/from EP mem\
 	\n 4. Fill local DDR address + 1M with DW pattern 0x55AA55AA\
-	\n 6. Multiple 1M Write transfers from local buffer to S32V_EP mem (pattern = %#x)\
 	\n 5. Read and print first and last 8DW(32bytes) in local DDR\
+	\n 6. Multiple 1M Write transfers from local buffer to EP mem (pattern = %#x)\
 	\n    This is essentially the same as #1, only looped and multithreaded.\
 	\n    Usable for performance tests and some errata validation.\
 	\n 7. Exit app\
