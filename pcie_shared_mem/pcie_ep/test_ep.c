@@ -21,6 +21,7 @@
 #include "pcie_ops.h"
 #include "pcie_ep_addr.h"
 #include "pcie_handshake.h"
+#include "pcie_benchmark.h"
 
 #define CMD1_PATTERN	0x12
 #define CMD3_PATTERN	0x67
@@ -53,11 +54,16 @@ struct test_write_args {
 static void *loop_pcie_write(void *va)
 {
 	int i;
+	struct timespec ts;
 	const struct test_write_args *args = (const struct test_write_args *)va;
+
+	pcie_test_start(&ts);
 
 	for (i = 0; i < args->count; i++) {
 		memcpy(args->dst, args->src, args->size);
 	}
+
+	pcie_test_stop(&ts, "8 : MultiWrite", args->size, 0);
 
 	return NULL;
 }
@@ -75,13 +81,8 @@ int main(int argc, char *argv[])
 	unsigned int *src_buff ;
 	unsigned int *dest_buff ;
 	unsigned char cmd = 0xff;
-	struct timespec tps;
-	unsigned long int nanoSec1Start;
-	unsigned long int nanoSec1Stop;
-	unsigned long int nanoSec2Start;
-	unsigned long int nanoSec2Stop;
-	unsigned long int nanoSecDiff1;
-	unsigned long int nanoSecDiff2;
+	struct timespec ts;
+
 	unsigned int mapsize = MAP_DDR_SIZE; /* 1M default */
 	char c;
 	unsigned short int go1 = 0;
@@ -200,10 +201,10 @@ start:
 	\n 2. Single 1M Read transfer from LS_RC DDR mem to local buffer\
 	\n 3. Variable size throughput test Write(pattern = %#x) + Read to/from LS_RC DDR mem\
 	\n 4. Fill local DDR_BASE + 1M with pattern 0xdeadbeef\
-	\n 5. Read and print first and last 32DW(128bytes) bytes in local DDR\
 	\n 6. Write 1M from local DDR to LS_RC DDR mem through DMA single transfer\
 	\n 7. Read 1M from LS_RC DDR mem to local DDR through DMA single transfer\
 	\n 8. Multiple 1M Write transfers from local buffer to LS_RC DDR mem (pattern=%#x)\
+	\n 5. Read and print first and last 8DW(32bytes) bytes in local DDR\
 	\n    This is essentially the same as #1, only looped and multithreaded.\
 	\n    Usable for performance tests and some errata validation.\
 	\n 9. Exit app\
@@ -276,44 +277,35 @@ start:
 	/* Single 1M bytes Write to LS_RC mem */
 	case 1:
 		memset(src_buff, CMD1_PATTERN, mapsize);
+		pcie_test_start(&ts);
 		memcpy((unsigned int *)mapPCIe, (unsigned int *) src_buff, mapsize);
+		pcie_test_stop(&ts, "1 : 1MB Write", mapsize, 0);
 		break;
 	/* Single 1M bytes Read from LS_RC mem */
 	case 2:
+		/* Clear local buffer*/
+		memset(dest_buff, 0x0, mapsize);
+		pcie_test_start(&ts);
 		memcpy((unsigned int *)dest_buff,(unsigned int *)mapPCIe, mapsize);
-		printf("\n First 32 DWORDS(1DW = 4bytes) copied from RC");
-		for (i = 0; i < 32; i++) {
-			printf("\n *(dest_buff + %#8x) = %#08x", i, *(dest_buff + i));
-		}
-		/* Resize for last 32 DWs */
-		j = (mapsize / 4) - 32;
-		printf("\n Last 32 DWORDS(1DW = 4bytes) copied from RC");
-		for (i = j ; i < mapsize / 4; i++) {
-			printf("\n *(dest_buff + %#8x) = %#08x", i, *(dest_buff + i));
-		}
+		pcie_test_stop(&ts, "2 : 1MB Read", mapsize, 0);
+
+		pcie_show_mem(dest_buff, mapsize, "copied from RC remote DDR");
 		break;
 	/* R/W thoughput test */
 	case 3:
 		/* Fill local src and dest buffer with different patterns */
 		memset(dest_buff, 0, mapsize);
 		memset(src_buff, CMD3_PATTERN, mapsize);
-		
-		clock_gettime(CLOCK_REALTIME, &tps);
-		nanoSec1Start = tps.tv_nsec;
+
+		pcie_test_start(&ts);
 		/* Start write transaction  */
 		memcpy(mapPCIe, src_buff, mapsize);
-		clock_gettime(CLOCK_REALTIME, &tps);
-		nanoSec1Stop = tps.tv_nsec;
-		nanoSecDiff1 = nanoSec1Stop - nanoSec1Start;
+		pcie_test_stop(&ts, "3 : Write", mapsize, 0);
 		
-		clock_gettime(CLOCK_REALTIME, &tps);
-		nanoSec2Start = tps.tv_nsec;
+		pcie_test_start(&ts);
 		/* Start read transaction  */
 		memcpy(dest_buff, mapPCIe, mapsize);
-
-		clock_gettime(CLOCK_REALTIME, &tps);
-		nanoSec2Stop = tps.tv_nsec;		
-		nanoSecDiff2 = nanoSec2Stop - nanoSec2Start;
+		pcie_test_stop(&ts, "3 : Read", mapsize, 0);
 		
 		if (memcmp(dest_buff, src_buff, mapsize) == 0) {
 			printf("\n W/R successful");
@@ -321,17 +313,6 @@ start:
 			printf("\n Transfer failed!");
 		}
 
-		printf("\n nanoSecDiff1(Write Transaction) = %ld	\
-			\n nanoSecDiff2(Read Transaction) = %ld",
-			nanoSecDiff1, nanoSecDiff2);
-		printf("\n tps.tv_sec = %ld", tps.tv_sec);
-		printf("\n tps.tv_nsec = %ld", tps.tv_nsec);
-		printf("\n Size of transfer in bytes = %d", mapsize);
-		/* (bytes / Period_nanosec) * 10^9 / (1024 * 1024)  */
-		printf ("\n /* (bytes / Period_nanosec) * 10^9 / (1024 * 1024)  */");
-		printf("\n Throughput write =%3.3f MB/sec", ((float)mapsize/nanoSecDiff1)*(float)953.67);
-		printf("\n Throughput read =%3.3f MB/sec", ((float)mapsize/nanoSecDiff2)*(float)953.67);
-		/* restore mapsize for the other commands */
 		mapsize = MAP_DDR_SIZE;
 		break;
 	/* Clear local mapped DDR */
@@ -342,15 +323,7 @@ start:
 		break;
 	/* read some data from ddr , starting with base addr */
 	case 5:
-		printf("\n First 32 DWORDS(1DW = 4bytes) from local mapped DDR");
-		for (i = 0 ; i < 32; i++) {
-			printf("\n *(mapDDR + %#8x) = %#08x", i, *(mapDDR + i));
-		}
-		j = (mapsize / 4) - 32;
-		printf("\n Last 32 DWORDS(1DW = 4bytes) from local mapped DDR");
-		for (i = j ; i < mapsize/4; i++) {
-			printf("\n *(mapDDR + %#8x) = %#08x", i, *(mapDDR + i));
-		}
+		pcie_show_mem(mapDDR, mapsize, "from local mapped DDR");
 		break;
 	/* SEND DMA single  block */
 	case 6:
@@ -361,20 +334,14 @@ start:
 		dma_single.dar = ep_pcie_base_address;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_WRITE_ELEM | DMA_FLAG_EN_DONE_INT | DMA_FLAG_LIE);
-		
-		/* Get timestamp before initiating transfer */
-		clock_gettime(CLOCK_REALTIME, &tps);
-		nanoSec1Start = tps.tv_nsec;
+
+		pcie_test_start(&ts);
 		ret = ioctl(fd1, SEND_SINGLE_DMA, &dma_single);
 		while (!dma_flag) { ; }
 		
-		/* Get timestamp after transfer */
-		clock_gettime(CLOCK_REALTIME, &tps);
-		nanoSec1Stop = tps.tv_nsec;
-		nanoSecDiff1 = nanoSec1Stop - nanoSec1Start;
-		printf("\n Throughput write =%3.3f MB/sec", ((float)mapsize/nanoSecDiff1)*(float)953.67);		
+		pcie_test_stop(&ts, "6 : 1MB Write", mapsize, 1);
 		
-		printf("\n cntSignalHandler = %d", cntSignalHandler);
+		printf("\n DMA Signal Handler count = %d", cntSignalHandler);
 		break;
 	/* GET DMA single  block */
 	case 7:
@@ -386,21 +353,17 @@ start:
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_READ_ELEM | DMA_FLAG_EN_DONE_INT  | DMA_FLAG_LIE);
 
-		/* Get timestamp before initiating transfer */
-		clock_gettime(CLOCK_REALTIME, &tps);
-		nanoSec2Start = tps.tv_nsec;
+		pcie_test_start(&ts);
 		ret = ioctl(fd1, SEND_SINGLE_DMA, &dma_single);
 		/* Wait for transfer done interrupt */
 		while (!dma_flag) { ; }
-		/* Get timestamp after transfer */		
-		clock_gettime(CLOCK_REALTIME, &tps);
-		nanoSec2Stop = tps.tv_nsec;
-		nanoSecDiff2 = nanoSec2Stop - nanoSec2Start;
-		printf("\n Throughput read =%3.3f MB/sec", ((float)mapsize/nanoSecDiff2)*(float)953.67);		
+
+		pcie_test_stop(&ts, "7 : 1MB Read", mapsize, 1);
 		break;
 	case 8:
 	{
 		const int num_threads = 100;
+
 		pthread_t threads[num_threads];
 		struct test_write_args args = {
 			.count = 100,

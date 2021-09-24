@@ -6,7 +6,8 @@ LDFLAGS	+= -lpthread
 
 CFLAGS	+= -g -I../../pcie_common/include
 
-OBJ	:= ../../pcie_common/pcie_rc_addr.o test_rc.o
+OBJ	:= ../../pcie_common/pcie_rc_addr.o ../../pcie_common/pcie_benchmark.o \
+		test_rc.o
 EXE	:= test_rc
 
 # this one should be last on the include list
