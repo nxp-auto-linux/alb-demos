@@ -77,7 +77,6 @@ int main(int argc, char *argv[])
 	unsigned int *mapPCIe = NULL;
 	unsigned long int rc_ddr_addr = UNDEFINED_DATA;
 	int i = 0;
-	int j = 0;
 	unsigned int *src_buff ;
 	unsigned int *dest_buff ;
 	unsigned char cmd = 0xff;
@@ -93,20 +92,23 @@ int main(int argc, char *argv[])
 	int batch_idx = 0;
 	unsigned long int ep_pcie_base_address = 0;
 	unsigned long int ep_local_ddr_addr = 0;
+	unsigned int bar_number = 0; /* BAR0 by default */
 	char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 	
 	/* Struct for DMA ioctl */
 	struct dma_data_elem dma_single = {0,0,0,0,0,0};
 
 	if (pcie_parse_ep_command_arguments(argc, argv,
-			&ep_pcie_base_address, &ep_local_ddr_addr, batch_commands)) {
-		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-c <commands>]\n\n", argv[0]);
-		printf("E.g. for BBMini (S32V234):\n %s -a 0xC1100000\n\n", argv[0]);
+			&ep_pcie_base_address, &ep_local_ddr_addr, &bar_number, batch_commands)) {
+		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-i <BAR index>] [-c <commands>]\n\n", argv[0]);
+		printf("E.g. for BBMini (S32V234):\n %s -a 0xC1100000 -b 0x72000000 -i 2\n", argv[0]);
+		printf("By default, BAR0 is used.\n\n");
 		exit(1);
 	}
 
 	printf ("EP local PCIe base address = 0x%lX\n", ep_pcie_base_address);
 	printf ("EP local DDR address = 0x%lX\n", ep_local_ddr_addr);
+	printf ("Using BAR%u\n\n", bar_number);
 
 	/* Set handler for SIGUSR */
 	memset(&action, 0, sizeof (action));	/* clean variable */
@@ -157,7 +159,7 @@ int main(int argc, char *argv[])
 	}
 	
 	/* Setup inbound window for receiving data into local shared buffer */
-	ret = pcie_init_inbound(ep_local_ddr_addr, fd1);
+	ret = pcie_init_inbound(ep_local_ddr_addr, bar_number, fd1);
 	if (ret < 0) {
 	    perror("Error while setting inbound region");
 	    goto err;

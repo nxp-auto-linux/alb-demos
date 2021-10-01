@@ -18,13 +18,15 @@
 #include <string.h>
 
 /* Inbound region structure */
+/* TODO: don't use region index and take next available from the driver */
 struct s32v_inbound_region inb1 = {
-    EP_BAR,			  	/* BAR2 by default */
+    0,			  		/* BAR0 by default */
     UNDEFINED_DATA,		/* locally-mapped DDR on EP (target addr) */
     0			  		/* region 0 */
 };
 
 /* Outbound region structure */
+/* TODO: don't use region index and take next available from the driver */
 struct s32v_outbound_region outb1 = {
     UNDEFINED_DATA,  	  	/* target_addr, to be filled from handshake data */
     UNDEFINED_DATA,         /* base_addr, to be filled afterwards */
@@ -33,11 +35,13 @@ struct s32v_outbound_region outb1 = {
     0						/* region type = mem */
 };
 
-int pcie_init_inbound(unsigned long int ep_local_ddr_addr, int fd)
+int pcie_init_inbound(unsigned long int ep_local_ddr_addr,
+	unsigned int bar_number, int fd)
 {
 	int ret = 0;
 
 	inb1.target_addr = ep_local_ddr_addr;
+	inb1.bar_nr = bar_number;
 	ret = ioctl(fd, SETUP_INBOUND, &inb1);
 	return ret;
 }
@@ -71,13 +75,15 @@ unsigned long long int pcie_wait_for_rc(struct s32v_handshake *phandshake)
 int pcie_parse_ep_command_arguments(int argc, char *argv[],
 	unsigned long int *ep_pcie_base_address,
 	unsigned long int *ep_local_ddr_addr,
+	unsigned int *bar_number,
 	char *batch_commands)
 {
 	char *ep_pcie_base_address_str = NULL;
 	char *ep_local_ddr_addr_str = NULL;
+	char *bar_number_str = NULL;
 	int c;
 
-	if (!ep_local_ddr_addr) {
+	if (!ep_local_ddr_addr || !ep_pcie_base_address || !bar_number) {
 		fprintf(stderr, "Invalid arguments\n");
 		return -1;
 	}
@@ -94,6 +100,14 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 			break;
 		  case 'e':
 			printf("Argument \"-e\" does not apply to EndPoint\n");
+			break;
+		  case 'n':
+			bar_number_str = optarg;
+			*bar_number = (unsigned int)strtoul(bar_number_str, NULL, 10);
+			if (*bar_number >= EP_NUM_BARS) {
+				printf("Invalid BAR number: %u\n", *bar_number);
+				*bar_number = 0;
+			}
 			break;
 		  case 'c':
 			if (batch_commands)
