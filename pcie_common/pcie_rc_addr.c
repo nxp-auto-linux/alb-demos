@@ -32,14 +32,14 @@ int pcie_notify_ep(struct s32v_handshake *phandshake,
 
 int pcie_parse_rc_command_arguments(int argc, char *argv[],
 	unsigned long int *rc_local_ddr_addr,
-	unsigned long int *ep_bar2_addr,
+	unsigned long int *ep_bar_addr,
 	char *batch_commands)
 {
-	char *ep_bar2_addr_str = NULL;
+	char *ep_bar_addr_str = NULL;
 	char *rc_local_ddr_addr_str = NULL;
 	int c;
 
-	if (!ep_bar2_addr || !rc_local_ddr_addr) {
+	if (!ep_bar_addr || !rc_local_ddr_addr) {
 		fprintf(stderr, "Invalid arguments\n");
 		return -1;
 	}
@@ -50,9 +50,15 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 			rc_local_ddr_addr_str = optarg;
 			*rc_local_ddr_addr = strtoul(rc_local_ddr_addr_str, NULL, 16);
 			break;
+		  case 'b':
+			printf("Argument \"-b\" does not apply to RootComplex\n");
+			break;
 		  case 'e':
-			ep_bar2_addr_str = optarg;
-			*ep_bar2_addr = strtoul(ep_bar2_addr_str, NULL, 16);
+			ep_bar_addr_str = optarg;
+			*ep_bar_addr = strtoul(ep_bar_addr_str, NULL, 16);
+			break;
+		  case 'i':
+			printf("Argument \"-i\" does not apply to RootComplex\n");
 			break;
 		  case 'c':
 			if (batch_commands)
@@ -63,7 +69,7 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 		}
 
 	batch_commands[MAX_BATCH_COMMANDS] = 0;
-	if (*ep_bar2_addr && *rc_local_ddr_addr)
+	if (*ep_bar_addr && *rc_local_ddr_addr)
 		return 0;
 
 	return 1;

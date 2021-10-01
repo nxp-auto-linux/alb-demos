@@ -404,9 +404,10 @@ int main (int Argc, char **ppArgv)
   uint8_t       buffer[BUFSIZE];
   unsigned long int ep_pcie_base_address = 0;
   unsigned long int ep_local_ddr_addr = 0;
+  unsigned int bar_number = 0;
 
   if (pcie_parse_ep_command_arguments(Argc, ppArgv,
-      &ep_pcie_base_address, &ep_local_ddr_addr, NULL))
+      &ep_pcie_base_address, &ep_local_ddr_addr, &bar_number, NULL))
     exit(1);
 
   /* parse command line options using getopt() for POSIX compatibility */
@@ -500,7 +501,7 @@ int main (int Argc, char **ppArgv)
   }
 
   /* Setup inbound window for receiving data into local shared buffer */
-  ret = pcie_init_inbound(ep_local_ddr_addr, fd1);
+  ret = pcie_init_inbound(ep_local_ddr_addr, bar_number, fd1);
   if (ret < 0) {
       perror("Error while setting inbound region");
       goto err;

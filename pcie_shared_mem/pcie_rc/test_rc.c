@@ -60,7 +60,6 @@ int main(int argc, char *argv[])
 	unsigned int mapsize = MAP_DDR_SIZE;
 
 	unsigned int i = 0;
-	unsigned int j = 0;
 	unsigned char cmd = 0;
 	char c;
 	unsigned int go_exit = 0;
