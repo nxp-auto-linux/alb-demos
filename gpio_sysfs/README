@@ -44,8 +44,8 @@ The pins must be physically connected using a wire or a jumper.
 Let's consider that IPIN is the input pin and OPIN is the output pin.
 
 Launch the demo instances:
-   root@s32g274ardb2:~# ./gpio OPIN 1 &
-   root@s32g274ardb2:~# ./gpio IPIN
+   root@s32g274ardb2:~# ./gpio_sysfs OPIN 1 &
+   root@s32g274ardb2:~# ./gpio_sysfs IPIN
 
 The former command exports OPIN, sets its direction to "out", writes
 1 as the initial pin's value, then toggles it for 50 times.
