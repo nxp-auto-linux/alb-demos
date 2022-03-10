@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2016 NXP Semiconductors
- * Copyright 2018 NXP
+ * Copyright 2016,2018,2022 NXP
  *
  * SPDX-License-Identifier:		BSD-3-Clause
  */
@@ -20,7 +19,7 @@ static unsigned pin;
 static void usage()
 {
 	fprintf(stderr, "Usage:\
-		./gpio pin_no value --- Set pin to output a specified value)\n\
+		./gpio pin_no value --- Set pin to output with an initial value\n\
 		./gpio pin_no       --- Set pin to input and read status\n");
 }
 
@@ -50,7 +49,7 @@ int main(int argc, char *argv[])
 
 		status = set_direction(pin, IN);
 		if (status)
-			return status;
+			goto exit;
 
 		/* Unregister the pin after a CTR+C */
 		signal(SIGINT, sigintHandler);
@@ -75,17 +74,22 @@ int main(int argc, char *argv[])
 
 		status = set_direction(pin, OUT);
 		if (status)
-			return status;
+			goto exit;
 
-		status = set_value(pin, value);
-		if (status)
-			return status;
+		for (int i = 0; i < 50; i++) {
+			status = set_value(pin, value);
+			if (status)
+				goto exit;
 
-		unexport_gpio(pin);
+			sleep(1);
+			value ^= 1;
+		}
 	} else {
 		usage();
 		return -EINVAL;
 	}
 
-	return 0;
+exit:
+	unexport_gpio(pin);
+	return status;
 }
