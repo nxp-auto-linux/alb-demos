@@ -1,0 +1,50 @@
+Userspace GPIO code samples
+===========================
+
+Contents
+--------
+* About
+* Requirements
+* Compilation and running
+* Credits
+
+About
+-----
+This demo is a basic, Linux-based, example of how to use Libgpiod Library C API
+for interacting with the GPIO. The 'gpio' application is used to manipulate GPIO pins – sets
+outputs and reads inputs.
+
+Requirements
+------------
+Before running the demo make sure that libgpiod is present on the target. The
+library and the libgpiod tools are included into 'fsl-image-auto' Yocto image.
+
+The schematic of the board might be needed in order to associate GPIO ids
+with pins.
+
+Compilation and running
+-----------------------
+To compile the demo, simply run "make" from this folder or from the parent
+folder containing all the demos.
+
+Before proceeding to next steps make sure that you identified 2 GPIO pins.
+One of the pins will be configured as input pin and another as output pin.
+The pins must be physically connected using a wire or a jumper.
+
+Let's consider that IPIN is the input pin and OPIN is the output pin,
+both being part of the same GPIO chip 'gpiochip0'. The available GPIO chips
+are listed using 'gpiodetect' command.
+
+Launch the demo instances:
+   root@s32g274ardb2:~# ./gpio_libgpiod gpiochip0 OPIN 1 &
+   root@s32g274ardb2:~# ./gpio_libgpiod gpiochip0 IPIN
+
+The former command reserves the OPIN line, sets its direction to "output", writes
+1 as the initial pin's value, then toggles it for 50 times. Only 0 and 1 are
+accepted as pin values. The latter command reads and prints each second the value
+of IPIN. The values of IPIN should alternate between 0 and 1 since the pins are
+connected.
+
+Credits
+-------
+* Copyright 2022 NXP
