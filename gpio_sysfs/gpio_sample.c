@@ -19,8 +19,8 @@ static unsigned pin;
 static void usage()
 {
 	fprintf(stderr, "Usage:\
-		./gpio pin_no value --- Set pin to output with an initial value\n\
-		./gpio pin_no       --- Set pin to input and read status\n");
+		./gpio_sysfs pin_no value --- Set pin to output with an initial value\n\
+		./gpio_sysfs pin_no       --- Set pin to input and read status\n");
 }
 
 static void sigintHandler(int signum)
