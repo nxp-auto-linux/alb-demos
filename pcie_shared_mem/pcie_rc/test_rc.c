@@ -75,8 +75,10 @@ int main(int argc, char *argv[])
 
 	if (pcie_parse_rc_command_arguments(argc, argv,
 			&rc_local_ddr_addr, &ep_bar2_addr, batch_commands)) {
-		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar2_addr_hex> [-c <commands>]\n\n", argv[0]);
-		printf("E.g. for BBMini (LS2084A):\n %s -a 0x8080100000 -e 0x3840100000\n\n", argv[0]);
+		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-c <commands>]\n\n", argv[0]);
+		printf("E.g. for S32G2 (PCIe0, EP using BAR0):\n %s -a 0xC0000000 -e 0x4800100000\n\n", argv[0]);
+		printf("Make sure <ep_bar_addr_hex> matches the EP BAR for the correct RC PCIe controller.\n");
+		printf("By default, the EPs are using BAR0.\n\n");
 		exit(1);
 	}
 
