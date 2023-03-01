@@ -22,7 +22,9 @@
 #define CMD3_PATTERN	0xC8
 #define CMD6_PATTERN	CMD1_PATTERN
 
-#define MAP_DDR_SIZE	1024 * 1024 * 1
+#define HEADER_SIZE	sizeof(struct s32_handshake)
+#define BUFFER_SIZE	(1024 * 1024 * 1)
+#define MAP_DDR_SIZE	(BUFFER_SIZE + HEADER_SIZE)
 
 struct test_write_args {
 	uint32_t count;
@@ -51,13 +53,17 @@ static void *loop_pcie_write(void *va)
 int main(int argc, char *argv[])
 {
 	int fd1;
-	unsigned int *mapDDR;
-	unsigned int *mapPCIe;
+
+	void *mapDDR_base = NULL;
+	void *mapPCIe_base = NULL;
+	unsigned int *mapDDR = NULL;
+	unsigned int *mapPCIe = NULL;
+
 	unsigned int *src_buff;
 	unsigned int *dest_buff;
 
 	/* Use a default 1M value if no arg */
-	unsigned int mapsize = MAP_DDR_SIZE;
+	unsigned int mapsize = BUFFER_SIZE;
 
 	unsigned int i = 0;
 	unsigned char cmd = 0;
@@ -104,10 +110,10 @@ int main(int argc, char *argv[])
 	}
 
 	/* MAP PCIe area */
-	mapPCIe = (unsigned int *)mmap(NULL, mapsize,
+	mapPCIe_base = mmap(NULL, MAP_DDR_SIZE,
 			PROT_READ | PROT_WRITE,
 			MAP_SHARED, fd1, ep_bar2_addr);
-	if (!mapPCIe) {
+	if (!mapPCIe_base) {
 		perror("/dev/mem PCIe area mapping FAILED");
 		goto err;
 	} else {
@@ -115,15 +121,18 @@ int main(int argc, char *argv[])
 	}
 
 	/* MAP DDR free 1M area. This was reserved at boot time */
-	mapDDR = (unsigned int *)mmap(NULL, MAP_DDR_SIZE,
+	mapDDR_base = mmap(NULL, MAP_DDR_SIZE,
 			PROT_READ | PROT_WRITE,
 			MAP_SHARED, fd1, rc_local_ddr_addr);
-	if (!mapDDR) {
+	if (!mapDDR_base) {
 		perror("/dev/mem DDR area mapping FAILED");
 		goto err;
 	} else {
 		printf("\n /dev/mem DDR area mapping OK");
 	}
+
+	mapDDR = mapDDR_base + HEADER_SIZE;
+	mapPCIe = mapPCIe_base + HEADER_SIZE;
 
 	/* Connect to EP and send RC_DDR_ADDR */
 	printf("\n Connecting to EP\n");
@@ -184,10 +193,10 @@ start :
 				break;
 			case '3':
 				printf("\n Enter bytes transfer size in hex (max %x, 128bytes multiple): ",
-					MAP_DDR_SIZE);
+					BUFFER_SIZE);
 				do {
 					scanf("%s" , word);
-					if (!sscanf(word, "%x", &mapsize) || (mapsize > MAP_DDR_SIZE))
+					if (!sscanf(word, "%x", &mapsize) || (mapsize > BUFFER_SIZE))
 						printf ("\n ERR, invalid input '%s'", word);
 					else {
 						cmd = 3;
@@ -253,7 +262,7 @@ start :
 			printf("\n Transfer failed!");
 		}
 
-		mapsize = MAP_DDR_SIZE;
+		mapsize = BUFFER_SIZE;
 		break;
 	case 4 : 
 		/* Fill local DDR_BASE + 1M with DW pattern 0x55AA55AA */

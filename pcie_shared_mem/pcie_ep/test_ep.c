@@ -27,7 +27,9 @@
 #define CMD3_PATTERN	0x67
 #define CMD8_PATTERN	CMD1_PATTERN
 
-#define MAP_DDR_SIZE	1024 * 1024 * 1
+#define HEADER_SIZE	sizeof(struct s32_handshake)
+#define BUFFER_SIZE	(1024 * 1024 * 1)
+#define MAP_DDR_SIZE	(BUFFER_SIZE + HEADER_SIZE)
 
 #define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
 
@@ -73,6 +75,8 @@ int main(int argc, char *argv[])
 	int fd1;
 	int fd2;
 	int ret = 0;
+	void *mapDDR_base = NULL;
+	void *mapPCIe_base = NULL;
 	unsigned int *mapDDR = NULL;
 	unsigned int *mapPCIe = NULL;
 	unsigned long int rc_ddr_addr = UNDEFINED_DATA;
@@ -82,7 +86,7 @@ int main(int argc, char *argv[])
 	unsigned char cmd = 0xff;
 	struct timespec ts;
 
-	unsigned int mapsize = MAP_DDR_SIZE; /* 1M default */
+	unsigned int mapsize = BUFFER_SIZE; /* 1M default */
 	char c;
 	unsigned short int go1 = 0;
 	unsigned short int go2 = 0;
@@ -117,8 +121,8 @@ int main(int argc, char *argv[])
 	action.sa_flags = SA_NODEFER;		/* do not block SIGUSR1 within sig_handler_int */
 	sigaction(SIGUSR1, &action, NULL);	/* attach action with SIGIO */
 
-	src_buff = (unsigned int *)malloc(MAP_DDR_SIZE);
-	dest_buff = (unsigned int *)malloc(MAP_DDR_SIZE);
+	src_buff = (unsigned int *)malloc(BUFFER_SIZE);
+	dest_buff = (unsigned int *)malloc(BUFFER_SIZE);
 
 	fd1 = open(EP_DBGFS_FILE, O_RDWR);
 	if (fd1 < 0) {
@@ -137,10 +141,10 @@ int main(int argc, char *argv[])
 	}
 	
 	/* MAP DDR free 1M area. This was reserved at boot time */
-	mapDDR = mmap(NULL, MAP_DDR_SIZE,
+	mapDDR_base = mmap(NULL, MAP_DDR_SIZE,
 			PROT_READ | PROT_WRITE,
 			MAP_SHARED, fd2, ep_local_ddr_addr);
-	if (!mapDDR) {
+	if (!mapDDR_base) {
 		perror("/dev/mem DDR area mapping FAILED");
 		goto err;
 	} else {
@@ -148,16 +152,19 @@ int main(int argc, char *argv[])
 	}
 	
 	/* Map PCIe area */
-	mapPCIe = mmap(NULL, MAP_DDR_SIZE,
+	mapPCIe_base = mmap(NULL, MAP_DDR_SIZE,
 			PROT_READ | PROT_WRITE,
 			MAP_SHARED, fd2, ep_pcie_base_address);
-	if (!mapPCIe) {
+	if (!mapPCIe_base) {
 		perror("/dev/mem PCIe area mapping FAILED");
 		goto err;
 	} else {
 		printf("\n /dev/mem PCIe area mapping OK");
 	}
-	
+
+	mapDDR = mapDDR_base + HEADER_SIZE;
+	mapPCIe = mapPCIe_base + HEADER_SIZE;
+
 	/* Setup inbound window for receiving data into local shared buffer */
 	ret = pcie_init_inbound(ep_local_ddr_addr, bar_number, fd1);
 	if (ret < 0) {
@@ -168,7 +175,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("\n Connecting to RC...\n");
-	rc_ddr_addr = pcie_wait_for_rc((struct s32_handshake *)mapDDR);
+	rc_ddr_addr = pcie_wait_for_rc((struct s32_handshake *)mapDDR_base);
 	printf(" RC_DDR_ADDR = %lx", rc_ddr_addr);
 
 	/* Setup outbound window for accessing RC mem */
@@ -246,16 +253,16 @@ start:
 				break;
 			case '3':
 				printf("\n Enter bytes transfer size in hex (max %x, 128bytes multiple): ", 
-					MAP_DDR_SIZE);
+					BUFFER_SIZE);
 				do {
 					scanf("%s" , word);
-					if (!sscanf(word, "%x", &mapsize) || (mapsize > MAP_DDR_SIZE))
+					if (!sscanf(word, "%x", &mapsize) || (mapsize > BUFFER_SIZE))
 						printf ("\n ERR, invalid input '%s'", word);
 					else {
 						cmd = 3;
 						go1 = 1;
 						go2 = 1;
-						printf ("\n mapsize = %x",mapsize);
+						printf ("\n size = %x",mapsize);
 						printf ("\n OK, going to transfer");
 					}
 				} while (!go2);
@@ -280,7 +287,7 @@ start:
 	case 1:
 		memset(src_buff, CMD1_PATTERN, mapsize);
 		pcie_test_start(&ts);
-		memcpy((unsigned int *)mapPCIe, (unsigned int *) src_buff, mapsize);
+		memcpy(mapPCIe, src_buff, mapsize);
 		pcie_test_stop(&ts, "1 : 1MB Write", mapsize, 0);
 		break;
 	/* Single 1M bytes Read from LS_RC mem */
@@ -288,7 +295,7 @@ start:
 		/* Clear local buffer*/
 		memset(dest_buff, 0x0, mapsize);
 		pcie_test_start(&ts);
-		memcpy((unsigned int *)dest_buff,(unsigned int *)mapPCIe, mapsize);
+		memcpy(dest_buff, mapPCIe, mapsize);
 		pcie_test_stop(&ts, "2 : 1MB Read", mapsize, 0);
 
 		pcie_show_mem(dest_buff, mapsize, "copied from RC remote DDR");
@@ -315,7 +322,7 @@ start:
 			printf("\n Transfer failed!");
 		}
 
-		mapsize = MAP_DDR_SIZE;
+		mapsize = BUFFER_SIZE;
 		break;
 	/* Clear local mapped DDR */
 	case 4:
