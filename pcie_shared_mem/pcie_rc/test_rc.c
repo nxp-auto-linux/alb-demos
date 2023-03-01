@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, 2021 NXP
+ * Copyright 2016, 2021, 2023 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  */
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 
 	/* Connect to EP and send RC_DDR_ADDR */
 	printf("\n Connecting to EP\n");
-	if (pcie_notify_ep((struct s32v_handshake *)mapPCIe,
+	if (pcie_notify_ep((struct s32_handshake *)mapPCIe,
 			rc_local_ddr_addr) < 0) {
 	    perror("Unable to send RC local DDR address to EP");
 	    goto err;

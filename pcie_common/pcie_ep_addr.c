@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2021 NXP
+ * Copyright 2018, 2021, 2023 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  * 
@@ -19,20 +19,20 @@
 
 /* Inbound region structure */
 /* TODO: don't use region index and take next available from the driver */
-struct s32v_inbound_region inb1 = {
-    0,			  		/* BAR0 by default */
-    UNDEFINED_DATA,		/* locally-mapped DDR on EP (target addr) */
-    0			  		/* region 0 */
+struct s32_inbound_region inb1 = {
+    0,			/* BAR0 by default */
+    UNDEFINED_DATA,	/* locally-mapped DDR on EP (target addr) */
+    0			/* region 0 */
 };
 
 /* Outbound region structure */
 /* TODO: don't use region index and take next available from the driver */
-struct s32v_outbound_region outb1 = {
-    UNDEFINED_DATA,  	  	/* target_addr, to be filled from handshake data */
-    UNDEFINED_DATA,         /* base_addr, to be filled afterwards */
-    UNDEFINED_DATA, 		/* size >= 64K(min for PCIE on S32V), to be filled afterwards */
-    0,						/* region number */
-    0						/* region type = mem */
+struct s32_outbound_region outb1 = {
+    UNDEFINED_DATA,	/* target_addr, to be filled from handshake data */
+    UNDEFINED_DATA,	/* base_addr, to be filled afterwards */
+    UNDEFINED_DATA,	/* size >= 64K(min for PCIE on S32), to be filled afterwards */
+    0,			/* region number */
+    0			/* region type = mem */
 };
 
 int pcie_init_inbound(unsigned long int ep_local_ddr_addr,
@@ -60,7 +60,7 @@ int pcie_init_outbound(unsigned long long int base_address,
     return ret;
 }
 
-unsigned long long int pcie_wait_for_rc(struct s32v_handshake *phandshake)
+unsigned long long int pcie_wait_for_rc(struct s32_handshake *phandshake)
 {
 	if (!phandshake)
 		return UNDEFINED_DATA;

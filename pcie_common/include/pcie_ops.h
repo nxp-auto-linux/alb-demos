@@ -5,7 +5,7 @@
  * Copyright (C) 2013 Kosagi
  *              http://www.kosagi.com
  * Copyright (C) 2014-2015 Freescale Semiconductor, Inc. All Rights Reserved.
- * Copyright 2016, 2021 NXP
+ * Copyright 2016, 2021, 2023 NXP
  *
  * Author: Sean Cross <xobs@kosagi.com>
  *
@@ -14,11 +14,11 @@
  * published by the Free Software Foundation.
  */
 
-#define S32V_MAGIC_NUM 'S'
-#define SETUP_OUTBOUND		_IOWR('S', 1, struct s32v_outbound_region)
-#define SETUP_INBOUND		_IOWR('S', 2, struct s32v_inbound_region)
+#define S32_MAGIC_NUM 'S'
+#define SETUP_OUTBOUND		_IOWR('S', 1, struct s32_outbound_region)
+#define SETUP_INBOUND		_IOWR('S', 2, struct s32_inbound_region)
 #define SEND_MSI			_IOWR('S', 3, unsigned long long)
-#define GET_BAR_INFO		_IOWR('S', 4, struct s32v_bar)
+#define GET_BAR_INFO		_IOWR('S', 4, struct s32_bar)
 #define SEND_SINGLE_DMA		_IOWR('S', 6, struct dma_data_elem)
 #define STORE_PID			_IOR('S', 7, int)
 #define SEND_SIGNAL			_IOR('S', 8,  int)
@@ -45,13 +45,13 @@ struct dma_data_elem {
 	unsigned int ch_num;
 };
 
-struct s32v_inbound_region {
+struct s32_inbound_region {
 	unsigned int  bar_nr;
 	unsigned int  target_addr;
 	unsigned int  region;
 };
 
-struct s32v_outbound_region {
+struct s32_outbound_region {
 	unsigned long long int target_addr;
 	unsigned long long int base_addr;
 	unsigned int  size;
@@ -59,7 +59,7 @@ struct s32v_outbound_region {
 	unsigned int  region_type;	
 };
 
-struct s32v_bar {
+struct s32_bar {
 	unsigned int bar_nr;
 	unsigned int size;
 	unsigned int addr;

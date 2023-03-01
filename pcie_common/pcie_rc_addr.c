@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int pcie_notify_ep(struct s32v_handshake *phandshake,
+int pcie_notify_ep(struct s32_handshake *phandshake,
 	unsigned long int rc_local_ddr_addr)
 {
 	if (!phandshake)

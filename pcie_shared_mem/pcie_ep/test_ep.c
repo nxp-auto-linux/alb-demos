@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, 2021 NXP
+ * Copyright 2016, 2021, 2023 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  */
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("\n Connecting to RC...\n");
-	rc_ddr_addr = pcie_wait_for_rc((struct s32v_handshake *)mapDDR);
+	rc_ddr_addr = pcie_wait_for_rc((struct s32_handshake *)mapDDR);
 	printf(" RC_DDR_ADDR = %lx", rc_ddr_addr);
 
 	/* Setup outbound window for accessing RC mem */
