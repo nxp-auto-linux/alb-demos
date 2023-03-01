@@ -1,4 +1,4 @@
-S32V234 PCIe Shared Memory Example
+S32 PCIe Shared Memory Example
 ==================================
 
 Contents
@@ -18,9 +18,6 @@ This demo is a basic, Linux-based, example of a pair of applications sharing
 a buffer in each other's memory and communicating over PCIe. The two apps can
 then read/write from/to their own or the other's shared mem, using either the
 CPU or DMA.
-The demos can run in two different setups:
-	. In a "NXP Bluebox";
-	. In a S32V234 EVB-PCIE configuration.
 
 
 Platforms
@@ -30,93 +27,15 @@ and one running as PCIe Endpoint (EP). The stated assumption is that both
 of them will run on Linux.
 
 Although the requirements for the RC application are not tied to a specific
-hardware platform, the demos have been tested in the following two
-configurations:
-	. "NXP Bluebox", with the LS2080A running as RC and the S32V234-PCIE
-	  running as EP;
-	. S32V234-EVB + S32V234-PCIE, with the EVB running as RC and the PCIE
-	  running as EP.
+hardware platform, the demos have been tested with two S32G/R boards, one
+PCIe controller on one board configured as RC and one PCIe controller on
+the other board configured as EP.
 
 For the time being, all values (addresses, sizes) necessary for
-shared memory communication are hard-wired, so the configuration selection is
-made at compile-time - see the "Configuration and running" section of this
-document.
-
-
-Prerequisites
--------------
-Before compiling and running the demos, the following prerequisites are
-assumed depending on the chosen configuration:
-
-A) In the "NXP Bluebox" setup
-	. Linux and u-boot images for LS2080A (RC) from SDK 2.0;
-	. Linux image for S32V234-PCIE (EP) built from the Auto Linux BSP;
-	. The EP Linux kernel must run the S32V-PCIE EP driver as per the
-	  S32V234 Linux BSP User Manual (see "Configuration and running");
-	. Shared memory must be reserved at boot-time:
-		- On the LS2080A edit the 'setbootargs' u-boot environment
-		  variable by appending 'mem=13568M';
-		- On the S32V234-PCIE edit the 'mmcargs' u-boot environment
-		  variable as follows:
-		  $setenv mmcargs setenv bootargs \
-		  	console=${console},${baudrate} root=${mmcroot} mem=255M
-		  then save the environment: '$ saveenv'
-	. The S32V234-PCIE EP demo uses debugfs, so it has to be mounted
-	  once Linux has booted up:
-	  # mount -t debugfs none /sys/kernel/debug
-	. Please also refer to the Auto Linux BSP User Manual, chapter
-	  "Setting Up the PCIe EP Mode".
-
-B) In the EVB-PCIE setup
-	. U-boot and Linux images for S32V234-PCIE (EP) and S32V234-EVB (RC)
-	  built from the Auto Linux BSP as per the User Manual;
-	. NOTE: While the kernel image for the S32V234-PCIE running as EP
-	  must have the CONFIG_PCI_S32V234_EP config option enabled, the image
-	  for the S32V234-EVB (RC) must _not_ have that option enabled.
-	. NOTE: the u-boot source must be amended with the following patch:
----------------
-diff --git a/include/configs/s32v234evb.h b/include/configs/s32v234evb.h
-index 999f66e..7bf8ef0 100644
---- a/include/configs/s32v234evb.h
-+++ b/include/configs/s32v234evb.h
-@@ -87,7 +87,7 @@
- #define CONFIG_SYS_INIT_SP_OFFSET \
-        (CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE - CONFIG_SYS_TEXT_OFFSET)
-
--/* #define CONFIG_CMD_PCI */
-+#define CONFIG_CMD_PCI
- #ifdef CONFIG_CMD_PCI
- #define CONFIG_GICSUPPORT
- #define CONFIG_USE_IRQ
-diff --git a/include/configs/s32v234pcie.h b/include/configs/s32v234pcie.h
-index 0c9756a..f3d0986 100644
---- a/include/configs/s32v234pcie.h
-+++ b/include/configs/s32v234pcie.h
-@@ -75,7 +75,7 @@
- #define CONFIG_SYS_INIT_SP_OFFSET \
-        (CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE - CONFIG_SYS_TEXT_OFFSET)
-
--/* #define CONFIG_CMD_PCI */
-+#define CONFIG_CMD_PCI
- #ifdef CONFIG_CMD_PCI
- #define CONFIG_PCIE_EP_MODE
- #define CONFIG_GICSUPPORT
----------------
-
-	. Shared memory must be reserved at boot-time:
-		- On both the S32V234-EVB and the S32V234-PCIE edit the 'mmcargs'
-		  u-boot environment variable as follows:
-		  $setenv mmcargs setenv bootargs \
-		  	console=${console},${baudrate} root=${mmcroot} mem=255M
-		  then save the environment: '$ saveenv'
-	  NOTE: Even if the BSP User Manual recommends using "mem=511M", the
-	  hardcoded values in the demos are for 255M, so this README recommends
-	  this value in order for the demos to work out-of-the-box.
-	. The S32V234-PCIE EP demo uses debugfs, so it has to be mounted
-	  once Linux has booted up:
-	  # mount -t debugfs none /sys/kernel/debug
-	. Please also refer to the Auto Linux BSP User Manual, chapter
-	  "Setting Up the PCIe EP Mode".
+shared memory communication are dependant on a physical memory range reserved
+from the kernel (currently there are two 4MB reserved-memory nodes in the
+device tree, pci_shared_memory0 at c0000000 and pci_shared_memory1 at c0400000)
+and on EP BAR address assigned on the RC side during enumeration.
 
 
 Configuration and running
@@ -144,56 +63,38 @@ Two separate executables will be generated, one for the PCIe EP, one for the RC.
 
 Applications description
 ------------------------
-Each of the two applications sets up a shared buffer (preallocated at boot-time)
-that the peer application can read from or write into via PCIe.  The local CPUs
-are also able to access the local buffers. Therefore, the following addresses
-are employed in the two applications:
-  a) In the RC application
-	. EP_BAR2_ADDR - This is the address of the BAR2 PCIe register of the
-	  S32V PCIE (EP) board as seen from the Linux instance running on RC.
-	  In the current setup, the EP configures BAR2 as 1M 32-bit
-	  non-prefetchable memory.
-	  The RC accesses the EP's shared buffer by locally mapping EP_BAR2_ADDR
-	  and writing at the mapped address. The transaction is then translated
-	  on EP side via a inbound window.
+Each of the two applications sets up a shared buffer (preallocated at boot-time,
+e.g. from the device tree reserved-memory nodes) that the peer application can 
+read from or write into via PCIe.  The local CPUs are also able to access the
+local buffers.
 
-	  This address can be obtained from the Linux terminal by looking at the
-	  output of the "lspci -vv" command. The relevant output from the
-	  command is of the following form:
 
-	  Memory at 1446100000 (32-bit, non-prefetchable) [size=1M] 
+Usage:
 
-	  NOTE: The "lspci" command from the Busybox shell does not support the
-	  "-v" or "-vv" flags; if the hardware setup does not match the
-	  addresses currently hard-coded in the demos sources, one would have to
-	  install the pciutils package in the rootfs in order to determine the
-	  correct values.
+EP side:
+test_ep -b <pcie_base_address> -a <local_ddr_addr_hex> [-i <BAR index>] [-c <commands>]
+test_rc -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-c <commands>]
 
-	. RC_DDR_ADDR - This is the physical address of the local buffer
-	  reserved at boot time for PCIe sharing. The buffer is 1M in size.
-	  The buffer is expectedly placed at the end of the physical memory and
-	  its address can be obtained from the Linux command-line via the
-	  command "cat /proc/iomem" and inspecting the System RAM field, from
-	  the output which is expectedly of the following form:
+Where:
+<local_ddr_addr_hex> is the local shared buffer, for both EP and RC.
+<pcie_base_address> is the base address of the PCIe controller address spacefor EP.
+(For S32G/R: 0x5800000000 for PCIe0 and 0x4800000000 for PCIe1).
+<ep_bar_addr_hex> is the EP BAR address shown during enumeration on RC.
 
-	  02000000-0200ffff : /i2c@2000000
-	  ...
-	  8080000000-834fffffff : System RAM
+By default, BAR0 is used for EP and is recommended for S32G/R.
+Make sure <ep_bar_addr_hex> matches the EP BAR for the correct RC PCIe controller.
 
-	  (In this example, the reserved buffer will be placed at 0x8350000000.)
+<commands> is a string composed of one-letter commands to be executed in a batch mode.
+It should contain the command letters '1' to '8' for EP, '1' to '6' for RC, plus 0 which
+means 5s delay. The exit commands are not required, as the applications will exit
+automatically after executing the batch.
 
- b) In the EP application
- 	. S32V_PCIE_BASE_ADDR - This is the base address of the PCIe config
-	  space. The address is defined in the S32V234 Reference Manual.
-	. S32V_LOCAL_DDR_ADDR - This is the physical address of the local buffer
-	  reserved at boot time for PCIe sharing. The buffer is 1M in size.
-	  The buffer is expectedly placed at the end of the physical memory and
-	  its address can be obtained via the same method as RC_DDR_ADDR in the
-	  RC demo (see above).
-	. RC_DDR_ADDR - This is the physical address of the remote buffer,
-	  residing in RC physical mem, which the peer RC will share over PCIe.
-	  Its value must necessarily be the same as "RC_DDR_ADDR" from the RC
-	  application setup (see above).
+Examples:
+for S32G/R EP (PCIe1, BAR0): test_ep -a 0xC0000000 -b 0x4800000000
+for S32G/R RC (PCIe0, EP using BAR0): test_rc -a 0xC0000000 -e 0x5800100000
+
+
+Description:
 
 The PCIe EP application sets up inbound and outbound translation windows
 for transactions coming from / going to the RC. It does so via ioctls provided
@@ -248,23 +149,18 @@ execution.
 
 Known limitations
 -----------------
-. Base addresses are hard-coded in both the RC and the EP applications
-. The demos are subject to the e9852 erratum, which restricts the read or write
-  transactions from the RC to the S32V EP.
-. PCIe hotplug is not currently supported. Consequently, in the S32V EVB+PCIE
-  setup, one will have to boot the PCIE (EP) board first and the EVB (RC) second
-  in order for the for the latter to discover the former on the PCIe bus.
+. PCIe hotplug is not currently supported.
+. EP target must boot and application test_ep must be started before booting
+linux on the RC side, so that enumeration on the RC board would pick up the
+right EP BAR config.
 
 
 Credits
 -------
-. Copyright © 2016 NXP Semiconductor
+. Copyright 2016-2023 NXP Semiconductor
 . The original code of the applications, as well as the original version of the
 User Manual, are credited to Aurelian Floricica (aurelian.floricica@nxp.com)
-. Subsequent modifications to the work artifacts should be blamed on
-Bogdan Hamciuc (bogdan.hamciuc@nxp.com)
+. Subsequent contributions should be blamed on
+Bogdan Hamciuc (bogdan.hamciuc@nxp.com) and
+Ionut Vicovan (ionut.vicovan@nxp.com)
 
-
-Todo list
----------
-. Remove hardcoding of addresses and mappings
