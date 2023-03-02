@@ -34,9 +34,11 @@ int pcie_notify_ep(struct s32_handshake *phandshake,
 int pcie_parse_rc_command_arguments(int argc, char *argv[],
 	unsigned long int *rc_local_ddr_addr,
 	unsigned long int *ep_bar_addr,
+	unsigned int *show_count,
 	char *batch_commands);
 int pcie_parse_ep_command_arguments(int argc, char *argv[],
 	unsigned long int *ep_pcie_base_address,
 	unsigned long int *ep_local_ddr_addr,
 	unsigned int *bar_number,
+	unsigned int *show_count,
 	char *batch_commands);

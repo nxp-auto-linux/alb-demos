@@ -4,7 +4,7 @@
  * fb9b1f85326abc95bb469ecd22796b92cf1e815e
  * 
  * Copyright (C) 2017 Texas Instruments
- * Copyright 2021 NXP
+ * Copyright 2021, 2023 NXP
  * 
  * SPDX-License-Identifier: GPL-2.0+
  */
@@ -131,17 +131,17 @@ void pcie_test_stop(struct timespec *start,
 
 void pcie_show_mem(unsigned int *buff,
 		unsigned int size,
-		char *mem_name)
+		char *mem_name, unsigned int count)
 {
 	int i;
 
-	printf("\n First 8 DWORDS(1DW = 4bytes) %s", mem_name);
-	for (i = 0; i < 8; i++) {
+	printf("\n First %d DWORDS(1DW = 4bytes) %s", count, mem_name);
+	for (i = 0; i < count; i++) {
 		printf("\n *(buf + %#8x) = %#08x", i, *(buff + i));
 	}
-	/* Resize for last 8 DWs */
-	printf("\n Last 8 DWORDS(1DW = 4bytes) %s", mem_name);
-	for (i = (size / 4) - 8; i < size / 4; i++) {
+	/* Resize for last DWs */
+	printf("\n Last %d DWORDS(1DW = 4bytes) %s", count, mem_name);
+	for (i = (size / 4) - count; i < size / 4; i++) {
 		printf("\n *(buff + %#8x) = %#08x", i, *(buff + i));
 	}
 }

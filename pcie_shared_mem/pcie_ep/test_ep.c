@@ -32,6 +32,7 @@
 #define MAP_DDR_SIZE	(BUFFER_SIZE + HEADER_SIZE)
 
 #define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
+#define SHOW_COUNT	2
 
 volatile sig_atomic_t dma_flag = 0;
 volatile sig_atomic_t cntSignalHandler = 0;
@@ -98,13 +99,14 @@ int main(int argc, char *argv[])
 	unsigned long int ep_local_ddr_addr = 0;
 	unsigned int bar_number = 0; /* BAR0 by default */
 	char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
+	unsigned int show_count = SHOW_COUNT;
 	
 	/* Struct for DMA ioctl */
 	struct dma_data_elem dma_single = {0,0,0,0,0,0};
 
 	if (pcie_parse_ep_command_arguments(argc, argv,
-			&ep_pcie_base_address, &ep_local_ddr_addr, &bar_number, batch_commands)) {
-		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-i <BAR index>] [-c <commands>]\n\n", argv[0]);
+			&ep_pcie_base_address, &ep_local_ddr_addr, &bar_number, &show_count, batch_commands)) {
+		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-i <BAR index>][-w count][-c <commands>]\n\n", argv[0]);
 		printf("E.g. for S32G2 (PCIe1, BAR0):\n %s -a 0xC0000000 -b 0x4800000000\n", argv[0]);
 		printf("By default, BAR0 is used.\n\n");
 		exit(1);
@@ -293,12 +295,10 @@ start:
 	/* Single 1M bytes Read from LS_RC mem */
 	case 2:
 		/* Clear local buffer*/
-		memset(dest_buff, 0x0, mapsize);
+		memset(mapDDR, 0x0, mapsize);
 		pcie_test_start(&ts);
-		memcpy(dest_buff, mapPCIe, mapsize);
+		memcpy(mapDDR, mapPCIe, mapsize);
 		pcie_test_stop(&ts, "2 : 1MB Read", mapsize, 0);
-
-		pcie_show_mem(dest_buff, mapsize, "copied from RC remote DDR");
 		break;
 	/* R/W thoughput test */
 	case 3:
@@ -332,7 +332,7 @@ start:
 		break;
 	/* read some data from ddr , starting with base addr */
 	case 5:
-		pcie_show_mem(mapDDR, mapsize, "from local mapped DDR");
+		pcie_show_mem(mapDDR, mapsize, "from local mapped DDR", show_count);
 		break;
 	/* SEND DMA single  block */
 	case 6:

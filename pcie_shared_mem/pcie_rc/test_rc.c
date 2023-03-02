@@ -26,6 +26,8 @@
 #define BUFFER_SIZE	(1024 * 1024 * 1)
 #define MAP_DDR_SIZE	(BUFFER_SIZE + HEADER_SIZE)
 
+#define SHOW_COUNT	2
+
 struct test_write_args {
 	uint32_t count;
 	void *dst;
@@ -76,12 +78,13 @@ int main(int argc, char *argv[])
 	unsigned long int rc_local_ddr_addr = 0;
 	char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 	int batch_idx = 0;
+	unsigned int show_count = SHOW_COUNT;
 
 	struct timespec ts;
 
 	if (pcie_parse_rc_command_arguments(argc, argv,
-			&rc_local_ddr_addr, &ep_bar2_addr, batch_commands)) {
-		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-c <commands>]\n\n", argv[0]);
+			&rc_local_ddr_addr, &ep_bar2_addr, &show_count, batch_commands)) {
+		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-w count][-c <commands>]\n\n", argv[0]);
 		printf("E.g. for S32G2 (PCIe0, EP using BAR0):\n %s -a 0xC0000000 -e 0x4800100000\n\n", argv[0]);
 		printf("Make sure <ep_bar_addr_hex> matches the EP BAR for the correct RC PCIe controller.\n");
 		printf("By default, the EPs are using BAR0.\n\n");
@@ -231,14 +234,12 @@ start :
 		break;
 	case 2 : /* Read from PCIe area */
 		/* Clear local buffer*/
-		memset(dest_buff, 0x0, mapsize);
+		memset(mapDDR, 0x0, mapsize);
 		pcie_test_start(&ts);
 		/* Copy from EP to local buffer */
-		memcpy((unsigned int *)dest_buff, (unsigned int *)mapPCIe, mapsize);
+		memcpy(mapDDR, mapPCIe, mapsize);
 
 		pcie_test_stop(&ts, "2 : 1MB Read", mapsize, 0);
-
-		pcie_show_mem(dest_buff, mapsize, "copied from EP remote DDR");
 		break;
 	case 3:
 		/* Fill local src and dest buffer with different patterns */
@@ -272,7 +273,7 @@ start :
 		break;
 	case 5 : 
 		/* Read DDR area(minimal check). Can verify what EP has written */
-		pcie_show_mem(mapDDR, mapsize, "from local mapped DDR");
+		pcie_show_mem(mapDDR, mapsize, "from local mapped DDR", show_count);
 		break;
 	case 6:
 	{

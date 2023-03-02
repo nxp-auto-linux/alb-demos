@@ -76,6 +76,7 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 	unsigned long int *ep_pcie_base_address,
 	unsigned long int *ep_local_ddr_addr,
 	unsigned int *bar_number,
+	unsigned int *show_count,
 	char *batch_commands)
 {
 	char *ep_pcie_base_address_str = NULL;
@@ -83,6 +84,7 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 	char *bar_number_str = NULL;
 	int c;
 
+	*show_count = 0;
 	if (!ep_local_ddr_addr || !ep_pcie_base_address || !bar_number) {
 		fprintf(stderr, "Invalid arguments\n");
 		return -1;
@@ -108,6 +110,9 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 				printf("Invalid BAR number: %u\n", *bar_number);
 				*bar_number = 0;
 			}
+			break;
+		  case 'w':
+			*show_count = strtoul(optarg, NULL, 10);
 			break;
 		  case 'c':
 			if (batch_commands)

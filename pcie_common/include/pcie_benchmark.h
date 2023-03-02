@@ -1,7 +1,7 @@
 /*
  * Benchmarking functions
  * 
- * Copyright 2021 NXP
+ * Copyright 2021, 2023 NXP
  * 
  * SPDX-License-Identifier: GPL-2.0+
  */
@@ -18,4 +18,4 @@ void pcie_test_stop(struct timespec *start,
 
 void pcie_show_mem(unsigned int *buff,
 		unsigned int size,
-		char *mem_name);
+		char *mem_name, unsigned int count);

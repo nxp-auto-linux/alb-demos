@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2021 NXP
+ * Copyright 2018, 2021, 2023 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  * 
@@ -33,6 +33,7 @@ int pcie_notify_ep(struct s32_handshake *phandshake,
 int pcie_parse_rc_command_arguments(int argc, char *argv[],
 	unsigned long int *rc_local_ddr_addr,
 	unsigned long int *ep_bar_addr,
+	unsigned int *show_count,
 	char *batch_commands)
 {
 	char *ep_bar_addr_str = NULL;
@@ -44,6 +45,7 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 		return -1;
 	}
 
+	*show_count = 0;
 	while ((c = getopt (argc, argv, COMMON_COMMAND_ARGUMENTS)) != -1)
 		switch (c) {
 		  case 'a':
@@ -59,6 +61,9 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 			break;
 		  case 'i':
 			printf("Argument \"-i\" does not apply to RootComplex\n");
+			break;
+		  case 'w':
+			*show_count = strtoul(optarg, NULL, 10);
 			break;
 		  case 'c':
 			if (batch_commands)
