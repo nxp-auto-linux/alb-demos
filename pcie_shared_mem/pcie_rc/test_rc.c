@@ -155,20 +155,7 @@ start :
 	go2 = 0;
 	cmd = 0xFF;
 
-	printf("\n Test cases :\
-	\n 1. Single 1M Write transfer from local buffer to EP mem (pattern = %#x)\
-	\n 2. Single 1M Read  transfer from EP mem to local buffer\
-	\n 3. Variable size throughput test Write(pattern = %#x) + Read to/from EP mem\
-	\n 4. Fill local DDR address + 1M with DW pattern 0x55AA55AA\
-	\n 5. Read and print first and last 8DW(32bytes) in local DDR\
-	\n 6. Multiple 1M Write transfers from local buffer to EP mem (pattern = %#x)\
-	\n    This is essentially the same as #1, only looped and multithreaded.\
-	\n    Usable for performance tests and some errata validation.\
-	\n 7. Exit app\
-	\n Select test : ",
-	CMD1_PATTERN,
-	CMD3_PATTERN,
-	CMD6_PATTERN);
+	printf("\n Select test (press 'h' to show all tests): ");
 
 	/* Check if we have batch commands; if not, go to interactive mode */
 	if (batch_commands[0]) {
@@ -212,6 +199,21 @@ start :
 						printf ("\n OK, going to transfer");
 					}
 				} while (!go2);
+				break;
+			case 'h':
+				printf("\n Test cases :\
+				\n 1. Single 1M Write transfer from local buffer to EP mem (pattern = %#x)\
+				\n 2. Single 1M Read  transfer from EP mem to local DDR buffer\
+				\n 3. Variable size throughput test Write(pattern = %#x) + Read to/from EP mem\
+				\n 4. Fill local DDR buffer (1M) with DW pattern 0x55AA55AA\
+				\n 5. Read and print first and last %d DW(32bytes) in local DDR\
+				\n 6. Multiple 1M Write transfers from local buffer to EP mem (pattern = %#x)\
+				\n    This is essentially the same as #1, only looped and multithreaded.\
+				\n    Usable for performance tests and some errata validation.\
+				\n 7. Exit app\n",
+				CMD1_PATTERN,
+				CMD3_PATTERN, show_count,
+				CMD6_PATTERN);
 				break;
 			default :
 				/* Omit enter key */
