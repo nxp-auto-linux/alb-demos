@@ -10,6 +10,8 @@
 #include <time.h>
 #include <stdint.h>
 
+#define SHOW_COUNT	2
+
 void pcie_test_start(struct timespec *start);
 
 void pcie_test_stop(struct timespec *start,

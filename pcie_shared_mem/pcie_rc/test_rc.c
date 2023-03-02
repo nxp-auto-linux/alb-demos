@@ -22,12 +22,6 @@
 #define CMD3_PATTERN	0xC8
 #define CMD6_PATTERN	CMD1_PATTERN
 
-#define HEADER_SIZE	sizeof(struct s32_handshake)
-#define BUFFER_SIZE	(1024 * 1024 * 1)
-#define MAP_DDR_SIZE	(BUFFER_SIZE + HEADER_SIZE)
-
-#define SHOW_COUNT	2
-
 struct test_write_args {
 	uint32_t count;
 	void *dst;

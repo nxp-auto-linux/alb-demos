@@ -12,6 +12,10 @@
 #define COMMON_COMMAND_ARGUMENTS "a:b:e:c:n:"
 #define MAX_BATCH_COMMANDS 10
 
+#define HEADER_SIZE	sizeof(struct s32_handshake)
+#define MAP_DDR_SIZE	(1024 * 1024 * 1)
+#define BUFFER_SIZE	(MAP_DDR_SIZE - HEADER_SIZE)
+
 /* A small buffer used for getting the RootComplex's DDR base address */
 struct s32_handshake {
     unsigned long long int rc_ddr_addr;

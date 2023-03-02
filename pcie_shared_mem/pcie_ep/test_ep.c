@@ -27,12 +27,7 @@
 #define CMD3_PATTERN	0x67
 #define CMD8_PATTERN	CMD1_PATTERN
 
-#define HEADER_SIZE	sizeof(struct s32_handshake)
-#define BUFFER_SIZE	(1024 * 1024 * 1)
-#define MAP_DDR_SIZE	(BUFFER_SIZE + HEADER_SIZE)
-
 #define EP_DBGFS_FILE		"/sys/kernel/debug/ep_dbgfs/ep_file"
-#define SHOW_COUNT	2
 
 volatile sig_atomic_t dma_flag = 0;
 volatile sig_atomic_t cntSignalHandler = 0;
