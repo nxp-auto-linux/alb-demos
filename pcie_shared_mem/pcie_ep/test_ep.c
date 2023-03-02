@@ -100,13 +100,14 @@ int main(int argc, char *argv[])
 	unsigned int bar_number = 0; /* BAR0 by default */
 	char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 	unsigned int show_count = SHOW_COUNT;
+	unsigned int skip_handshake = 0;
 	
 	/* Struct for DMA ioctl */
 	struct dma_data_elem dma_single = {0,0,0,0,0,0};
 
 	if (pcie_parse_ep_command_arguments(argc, argv,
-			&ep_pcie_base_address, &ep_local_ddr_addr, &bar_number, &show_count, batch_commands)) {
-		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-i <BAR index>][-w count][-c <commands>]\n\n", argv[0]);
+			&ep_pcie_base_address, &ep_local_ddr_addr, &bar_number, &show_count, &skip_handshake, batch_commands)) {
+		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-i <BAR index>][-w count][-s][-c <commands>]\n\n", argv[0]);
 		printf("E.g. for S32G2 (PCIe1, BAR0):\n %s -a 0xC0000000 -b 0x4800000000\n", argv[0]);
 		printf("By default, BAR0 is used.\n\n");
 		exit(1);
@@ -167,27 +168,29 @@ int main(int argc, char *argv[])
 	mapDDR = mapDDR_base + HEADER_SIZE;
 	mapPCIe = mapPCIe_base + HEADER_SIZE;
 
-	/* Setup inbound window for receiving data into local shared buffer */
-	ret = pcie_init_inbound(ep_local_ddr_addr, bar_number, fd1);
-	if (ret < 0) {
-	    perror("Error while setting inbound region");
-	    goto err;
-	} else {
-	    printf("\n Inbound region setup successfully");
-	}
+	if (!skip_handshake) {
+		/* Setup inbound window for receiving data into local shared buffer */
+		ret = pcie_init_inbound(ep_local_ddr_addr, bar_number, fd1);
+		if (ret < 0) {
+		    perror("Error while setting inbound region");
+		    goto err;
+		} else {
+		    printf("\n Inbound region setup successfully");
+		}
 
-	printf("\n Connecting to RC...\n");
-	rc_ddr_addr = pcie_wait_for_rc((struct s32_handshake *)mapDDR_base);
-	printf(" RC_DDR_ADDR = %lx", rc_ddr_addr);
+		printf("\n Connecting to RC...\n");
+		rc_ddr_addr = pcie_wait_for_rc((struct s32_handshake *)mapDDR_base);
+		printf(" RC_DDR_ADDR = %lx", rc_ddr_addr);
 
-	/* Setup outbound window for accessing RC mem */
-	ret = pcie_init_outbound(ep_pcie_base_address,
-		rc_ddr_addr, MAP_DDR_SIZE, fd1);
-	if (ret < 0) {
-		perror("Error while setting outbound region");
-	  	goto err;
-	} else {
-		printf("\n Outbound region setup successfully");
+		/* Setup outbound window for accessing RC mem */
+		ret = pcie_init_outbound(ep_pcie_base_address,
+			rc_ddr_addr, MAP_DDR_SIZE, fd1);
+		if (ret < 0) {
+			perror("Error while setting outbound region");
+			goto err;
+		} else {
+			printf("\n Outbound region setup successfully");
+		}
 	}
 
 	/* Sending pid by ioctl. This sets up signaling from kernel */

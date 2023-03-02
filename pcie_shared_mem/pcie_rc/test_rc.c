@@ -79,12 +79,13 @@ int main(int argc, char *argv[])
 	char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 	int batch_idx = 0;
 	unsigned int show_count = SHOW_COUNT;
+	unsigned int skip_handshake = 0;
 
 	struct timespec ts;
 
 	if (pcie_parse_rc_command_arguments(argc, argv,
-			&rc_local_ddr_addr, &ep_bar2_addr, &show_count, batch_commands)) {
-		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-w count][-c <commands>]\n\n", argv[0]);
+			&rc_local_ddr_addr, &ep_bar2_addr, &show_count, &skip_handshake, batch_commands)) {
+		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-w count][-s][-c <commands>]\n\n", argv[0]);
 		printf("E.g. for S32G2 (PCIe0, EP using BAR0):\n %s -a 0xC0000000 -e 0x4800100000\n\n", argv[0]);
 		printf("Make sure <ep_bar_addr_hex> matches the EP BAR for the correct RC PCIe controller.\n");
 		printf("By default, the EPs are using BAR0.\n\n");
@@ -137,12 +138,14 @@ int main(int argc, char *argv[])
 	mapDDR = mapDDR_base + HEADER_SIZE;
 	mapPCIe = mapPCIe_base + HEADER_SIZE;
 
-	/* Connect to EP and send RC_DDR_ADDR */
-	printf("\n Connecting to EP\n");
-	if (pcie_notify_ep((struct s32_handshake *)mapPCIe,
-			rc_local_ddr_addr) < 0) {
-	    perror("Unable to send RC local DDR address to EP");
-	    goto err;
+	if (!skip_handshake) {
+		/* Connect to EP and send RC_DDR_ADDR */
+		printf("\n Connecting to EP\n");
+		if (pcie_notify_ep((struct s32_handshake *)mapPCIe,
+				rc_local_ddr_addr) < 0) {
+		    perror("Unable to send RC local DDR address to EP");
+		    goto err;
+		}
 	}
 
 	printf("Hello PCIe RC mem test app\n");

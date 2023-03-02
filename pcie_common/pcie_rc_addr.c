@@ -34,6 +34,7 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 	unsigned long int *rc_local_ddr_addr,
 	unsigned long int *ep_bar_addr,
 	unsigned int *show_count,
+	unsigned int *skip_handshake,
 	char *batch_commands)
 {
 	char *ep_bar_addr_str = NULL;
@@ -46,6 +47,7 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 	}
 
 	*show_count = 0;
+	*skip_handshake = 0;
 	while ((c = getopt (argc, argv, COMMON_COMMAND_ARGUMENTS)) != -1)
 		switch (c) {
 		  case 'a':
@@ -64,6 +66,9 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 			break;
 		  case 'w':
 			*show_count = strtoul(optarg, NULL, 10);
+			break;
+		  case 's':
+			*skip_handshake = 1;
 			break;
 		  case 'c':
 			if (batch_commands)
