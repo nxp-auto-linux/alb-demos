@@ -9,7 +9,7 @@
 #define UNDEFINED_DATA 	0x0
 #define DEFAULT_TIMEOUT_US 10000
 
-#define COMMON_COMMAND_ARGUMENTS "a:b:e:c:n:"
+#define COMMON_COMMAND_ARGUMENTS "a:b:e:c:n:w:s"
 #define MAX_BATCH_COMMANDS 10
 
 #define HEADER_SIZE	sizeof(struct s32_handshake)
