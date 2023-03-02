@@ -76,17 +76,13 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 	unsigned long int *ep_pcie_base_address,
 	unsigned long int *ep_local_ddr_addr,
 	unsigned int *bar_number,
-	unsigned int *show_count,
-	unsigned int *skip_handshake,
-	char *batch_commands)
+	struct s32_common_args *args)
 {
 	char *ep_pcie_base_address_str = NULL;
 	char *ep_local_ddr_addr_str = NULL;
 	char *bar_number_str = NULL;
 	int c;
 
-	*show_count = 0;
-	*skip_handshake = 0;
 	if (!ep_local_ddr_addr || !ep_pcie_base_address || !bar_number) {
 		fprintf(stderr, "Invalid arguments\n");
 		return -1;
@@ -114,20 +110,32 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 			}
 			break;
 		  case 'w':
-			*show_count = strtoul(optarg, NULL, 10);
+			if (args)
+				args->show_count = strtoul(optarg, NULL, 10);
+			else
+				fprintf(stderr, "Unsupported option '-w'\n");
+			break;
+		  case 'm':
+			if (args)
+				args->map_size = strtoul(optarg, NULL, 10);
+			else
+				fprintf(stderr, "Unsupported option '-m'\n");
 			break;
 		  case 's':
-			*skip_handshake = 1;
+			if (args)
+				args->skip_handshake = 1;
+			else
+				fprintf(stderr, "Unsupported option '-s'\n");
 			break;
 		  case 'c':
-			if (batch_commands)
-				strncpy(batch_commands, optarg, MAX_BATCH_COMMANDS);
+			if (args)
+				strncpy(args->batch_commands, optarg, MAX_BATCH_COMMANDS);
 			else
 				fprintf(stderr, "Unsupported option '-c'\n");
 			break;
 		}
 
-	batch_commands[MAX_BATCH_COMMANDS] = 0;
+	args->batch_commands[MAX_BATCH_COMMANDS] = 0;
 	if (*ep_local_ddr_addr && *ep_pcie_base_address)
 		return 0;
 

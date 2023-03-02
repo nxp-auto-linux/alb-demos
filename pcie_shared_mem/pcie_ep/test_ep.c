@@ -82,7 +82,8 @@ int main(int argc, char *argv[])
 	unsigned char cmd = 0xff;
 	struct timespec ts;
 
-	unsigned int mapsize = BUFFER_SIZE; /* 1M default */
+	unsigned int totalsize = MAP_DDR_SIZE; /* 1M default */
+	unsigned int mapsize = MAP_DDR_SIZE - HEADER_SIZE;
 	char c;
 	unsigned short int go1 = 0;
 	unsigned short int go2 = 0;
@@ -93,24 +94,29 @@ int main(int argc, char *argv[])
 	unsigned long int ep_pcie_base_address = 0;
 	unsigned long int ep_local_ddr_addr = 0;
 	unsigned int bar_number = 0; /* BAR0 by default */
-	char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 	unsigned int show_count = SHOW_COUNT;
 	unsigned int skip_handshake = 0;
-	
+
 	/* Struct for DMA ioctl */
 	struct dma_data_elem dma_single = {0,0,0,0,0,0};
+	struct s32_common_args args = {MAP_DDR_SIZE, SHOW_COUNT, 0,};
 
 	if (pcie_parse_ep_command_arguments(argc, argv,
-			&ep_pcie_base_address, &ep_local_ddr_addr, &bar_number, &show_count, &skip_handshake, batch_commands)) {
+			&ep_pcie_base_address, &ep_local_ddr_addr, &bar_number, &args)) {
 		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-i <BAR index>][-w count][-s][-c <commands>]\n\n", argv[0]);
 		printf("E.g. for S32G2 (PCIe1, BAR0):\n %s -a 0xC0000000 -b 0x4800000000\n", argv[0]);
 		printf("By default, BAR0 is used.\n\n");
 		exit(1);
 	}
 
+	totalsize = args.map_size;
+	mapsize = totalsize - HEADER_SIZE;
+	show_count = args.show_count;
+	skip_handshake = args.skip_handshake;
+
 	printf ("EP local PCIe base address = 0x%lX\n", ep_pcie_base_address);
 	printf ("EP local DDR address = 0x%lX\n", ep_local_ddr_addr);
-	printf ("Using BAR%u\n\n", bar_number);
+	printf ("Total size = %d bytes\nUsing BAR%u\n\n", totalsize, bar_number);
 
 	/* Set handler for SIGUSR */
 	memset(&action, 0, sizeof (action));	/* clean variable */
@@ -119,8 +125,8 @@ int main(int argc, char *argv[])
 	action.sa_flags = SA_NODEFER;		/* do not block SIGUSR1 within sig_handler_int */
 	sigaction(SIGUSR1, &action, NULL);	/* attach action with SIGIO */
 
-	src_buff = (unsigned int *)malloc(BUFFER_SIZE);
-	dest_buff = (unsigned int *)malloc(BUFFER_SIZE);
+	src_buff = (unsigned int *)malloc(mapsize);
+	dest_buff = (unsigned int *)malloc(mapsize);
 
 	fd1 = open(EP_DBGFS_FILE, O_RDWR);
 	if (fd1 < 0) {
@@ -137,9 +143,9 @@ int main(int argc, char *argv[])
 	} else {
 		printf("\n Mem opened successfully");
 	}
-	
+
 	/* MAP DDR free 1M area. This was reserved at boot time */
-	mapDDR_base = mmap(NULL, MAP_DDR_SIZE,
+	mapDDR_base = mmap(NULL, totalsize,
 			PROT_READ | PROT_WRITE,
 			MAP_SHARED, fd2, ep_local_ddr_addr);
 	if (!mapDDR_base) {
@@ -148,9 +154,9 @@ int main(int argc, char *argv[])
 	} else {
 		printf("\n /dev/mem DDR area mapping OK");
 	}
-	
+
 	/* Map PCIe area */
-	mapPCIe_base = mmap(NULL, MAP_DDR_SIZE,
+	mapPCIe_base = mmap(NULL, totalsize,
 			PROT_READ | PROT_WRITE,
 			MAP_SHARED, fd2, ep_pcie_base_address);
 	if (!mapPCIe_base) {
@@ -162,6 +168,8 @@ int main(int argc, char *argv[])
 
 	mapDDR = mapDDR_base + HEADER_SIZE;
 	mapPCIe = mapPCIe_base + HEADER_SIZE;
+	printf ("Local DDR base: 0x%lX; DDR buffer = 0x%lX\n",
+		(uintptr_t)mapDDR_base, (uintptr_t)mapDDR);
 
 	if (!skip_handshake) {
 		/* Setup inbound window for receiving data into local shared buffer */
@@ -179,7 +187,7 @@ int main(int argc, char *argv[])
 
 		/* Setup outbound window for accessing RC mem */
 		ret = pcie_init_outbound(ep_pcie_base_address,
-			rc_ddr_addr, MAP_DDR_SIZE, fd1);
+			rc_ddr_addr, totalsize, fd1);
 		if (ret < 0) {
 			perror("Error while setting outbound region");
 			goto err;
@@ -208,9 +216,9 @@ start:
 	printf("\n Select test (press 'h' to show all tests): ");
 
 	/* Check if we have batch commands; if not, go to interactive mode */
-	if (batch_commands[0]) {
-		cmd = batch_commands[batch_idx++];
-		if (cmd) 
+	if (args.batch_commands[0]) {
+		cmd = args.batch_commands[batch_idx++];
+		if (cmd)
 			cmd -= '0';
 		else
 			cmd = 9;
@@ -220,7 +228,7 @@ start:
 			goto exit;
 		}
 	} else {
-		
+
 		/* Stop for char input. Sync with debugger */
 		do {
 			c = getchar();
@@ -237,17 +245,17 @@ start:
 				go1 = 1;
 				break;
 			case '3':
-				printf("\n Enter bytes transfer size in hex (max %x, 128bytes multiple): ", 
-					BUFFER_SIZE);
+				printf("\n Enter bytes transfer size in hex (max %x, 128bytes multiple): ",
+					mapsize);
 				do {
 					scanf("%s" , word);
-					if (!sscanf(word, "%x", &mapsize) || (mapsize > BUFFER_SIZE))
+					if (!sscanf(word, "%x", &mapsize) || (mapsize > totalsize - HEADER_SIZE))
 						printf ("\n ERR, invalid input '%s'", word);
 					else {
 						cmd = 3;
 						go1 = 1;
 						go2 = 1;
-						printf ("\n size = %x",mapsize);
+						printf ("\n size = %x", mapsize);
 						printf ("\n OK, going to transfer");
 					}
 				} while (!go2);
@@ -310,19 +318,19 @@ start:
 		/* Start write transaction  */
 		memcpy(mapPCIe, src_buff, mapsize);
 		pcie_test_stop(&ts, "3 : Write", mapsize, 0);
-		
+
 		pcie_test_start(&ts);
 		/* Start read transaction  */
 		memcpy(dest_buff, mapPCIe, mapsize);
 		pcie_test_stop(&ts, "3 : Read", mapsize, 0);
-		
+
 		if (memcmp(dest_buff, src_buff, mapsize) == 0) {
 			printf("\n W/R successful");
 		} else {
 			printf("\n Transfer failed!");
 		}
 
-		mapsize = BUFFER_SIZE;
+		mapsize = totalsize - HEADER_SIZE;
 		break;
 	/* Clear local mapped DDR */
 	case 4:
@@ -347,9 +355,9 @@ start:
 		pcie_test_start(&ts);
 		ret = ioctl(fd1, SEND_SINGLE_DMA, &dma_single);
 		while (!dma_flag) { ; }
-		
+
 		pcie_test_stop(&ts, "6 : 1MB Write", mapsize, 1);
-		
+
 		printf("\n DMA Signal Handler count = %d", cntSignalHandler);
 		break;
 	/* GET DMA single  block */
@@ -417,11 +425,11 @@ start:
 		goto exit;
 	else
 		goto start;
-	
+
 err :
 		printf("\n too many errors");
 
-exit : 
+exit :
 	close(fd1);
 	close(fd2);
 	printf("\n Gonna exit now\n");

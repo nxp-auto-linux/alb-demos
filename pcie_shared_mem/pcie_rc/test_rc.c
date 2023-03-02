@@ -58,8 +58,8 @@ int main(int argc, char *argv[])
 	unsigned int *src_buff;
 	unsigned int *dest_buff;
 
-	/* Use a default 1M value if no arg */
-	unsigned int mapsize = BUFFER_SIZE;
+	unsigned int totalsize = MAP_DDR_SIZE; /* 1M default */
+	unsigned int mapsize = MAP_DDR_SIZE - HEADER_SIZE;
 
 	unsigned int i = 0;
 	unsigned char cmd = 0;
@@ -74,11 +74,12 @@ int main(int argc, char *argv[])
 	int batch_idx = 0;
 	unsigned int show_count = SHOW_COUNT;
 	unsigned int skip_handshake = 0;
+	struct s32_common_args args = {MAP_DDR_SIZE, SHOW_COUNT, 0,};
 
 	struct timespec ts;
 
 	if (pcie_parse_rc_command_arguments(argc, argv,
-			&rc_local_ddr_addr, &ep_bar2_addr, &show_count, &skip_handshake, batch_commands)) {
+			&rc_local_ddr_addr, &ep_bar2_addr, &args)) {
 		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-w count][-s][-c <commands>]\n\n", argv[0]);
 		printf("E.g. for S32G2 (PCIe0, EP using BAR0):\n %s -a 0xC0000000 -e 0x4800100000\n\n", argv[0]);
 		printf("Make sure <ep_bar_addr_hex> matches the EP BAR for the correct RC PCIe controller.\n");
@@ -86,8 +87,14 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	totalsize = args.map_size;
+	mapsize = totalsize - HEADER_SIZE;
+	show_count = args.show_count;
+	skip_handshake = args.skip_handshake;
+
 	printf ("RC local DDR address = 0x%lx\n", rc_local_ddr_addr);
 	printf ("EP BAR2 address = 0x%lx\n", ep_bar2_addr);
+	printf ("Total size = %d bytes\n\n", totalsize);
 
 	src_buff = (unsigned int *)malloc(mapsize);
 	if (!src_buff) {
@@ -108,7 +115,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* MAP PCIe area */
-	mapPCIe_base = mmap(NULL, MAP_DDR_SIZE,
+	mapPCIe_base = mmap(NULL, totalsize,
 			PROT_READ | PROT_WRITE,
 			MAP_SHARED, fd1, ep_bar2_addr);
 	if (!mapPCIe_base) {
@@ -119,7 +126,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* MAP DDR free 1M area. This was reserved at boot time */
-	mapDDR_base = mmap(NULL, MAP_DDR_SIZE,
+	mapDDR_base = mmap(NULL, totalsize,
 			PROT_READ | PROT_WRITE,
 			MAP_SHARED, fd1, rc_local_ddr_addr);
 	if (!mapDDR_base) {
@@ -131,6 +138,8 @@ int main(int argc, char *argv[])
 
 	mapDDR = mapDDR_base + HEADER_SIZE;
 	mapPCIe = mapPCIe_base + HEADER_SIZE;
+	printf ("Local DDR base: 0x%lX; DDR buffer = 0x%lX\n",
+		(uintptr_t)mapDDR_base, (uintptr_t)mapDDR);
 
 	if (!skip_handshake) {
 		/* Connect to EP and send RC_DDR_ADDR */
@@ -180,16 +189,16 @@ start :
 				break;
 			case '3':
 				printf("\n Enter bytes transfer size in hex (max %x, 128bytes multiple): ",
-					BUFFER_SIZE);
+					mapsize);
 				do {
 					scanf("%s" , word);
-					if (!sscanf(word, "%x", &mapsize) || (mapsize > BUFFER_SIZE))
+					if (!sscanf(word, "%x", &mapsize) || (mapsize > totalsize - HEADER_SIZE))
 						printf ("\n ERR, invalid input '%s'", word);
 					else {
 						cmd = 3;
 						go1 = 1;
 						go2 = 1;
-						printf ("\n mapsize = %x",mapsize);
+						printf ("\n size = %x", mapsize);
 						printf ("\n OK, going to transfer");
 					}
 				} while (!go2);
@@ -262,15 +271,15 @@ start :
 			printf("\n Transfer failed!");
 		}
 
-		mapsize = BUFFER_SIZE;
+		mapsize = totalsize - HEADER_SIZE;
 		break;
-	case 4 : 
+	case 4 :
 		/* Fill local DDR_BASE + 1M with DW pattern 0x55AA55AA */
 		for (i = 0 ; i < mapsize / 4 ; i++) {
 			*(mapDDR + i) = (unsigned int)0x55AA55AA;
 		}
 		break;
-	case 5 : 
+	case 5 :
 		/* Read DDR area(minimal check). Can verify what EP has written */
 		pcie_show_mem(mapDDR, mapsize, "from local mapped DDR", show_count);
 		break;
@@ -318,13 +327,13 @@ start :
 	}
 	if (go_exit)
 		goto exit;
-	else 
+	else
 		goto start;
 
 err :
 	printf("\n Too many errors");
 
-exit : 
+exit :
 	close(fd1);
 	printf("\n Gonna exit now\n");
 	exit(0);

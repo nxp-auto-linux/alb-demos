@@ -33,9 +33,7 @@ int pcie_notify_ep(struct s32_handshake *phandshake,
 int pcie_parse_rc_command_arguments(int argc, char *argv[],
 	unsigned long int *rc_local_ddr_addr,
 	unsigned long int *ep_bar_addr,
-	unsigned int *show_count,
-	unsigned int *skip_handshake,
-	char *batch_commands)
+	struct s32_common_args *args)
 {
 	char *ep_bar_addr_str = NULL;
 	char *rc_local_ddr_addr_str = NULL;
@@ -46,8 +44,6 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 		return -1;
 	}
 
-	*show_count = 0;
-	*skip_handshake = 0;
 	while ((c = getopt (argc, argv, COMMON_COMMAND_ARGUMENTS)) != -1)
 		switch (c) {
 		  case 'a':
@@ -65,20 +61,32 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 			printf("Argument \"-i\" does not apply to RootComplex\n");
 			break;
 		  case 'w':
-			*show_count = strtoul(optarg, NULL, 10);
+			if (args)
+				args->show_count = strtoul(optarg, NULL, 10);
+			else
+				fprintf(stderr, "Unsupported option '-w'\n");
+			break;
+		  case 'm':
+			if (args)
+				args->map_size = strtoul(optarg, NULL, 10);
+			else
+				fprintf(stderr, "Unsupported option '-m'\n");
 			break;
 		  case 's':
-			*skip_handshake = 1;
+			if (args)
+				args->skip_handshake = 1;
+			else
+				fprintf(stderr, "Unsupported option '-s'\n");
 			break;
 		  case 'c':
-			if (batch_commands)
-				strncpy(batch_commands, optarg, MAX_BATCH_COMMANDS);
+			if (args)
+				strncpy(args->batch_commands, optarg, MAX_BATCH_COMMANDS);
 			else
 				fprintf(stderr, "Unsupported option '-c'\n");
 			break;
 		}
 
-	batch_commands[MAX_BATCH_COMMANDS] = 0;
+	args->batch_commands[MAX_BATCH_COMMANDS] = 0;
 	if (*ep_bar_addr && *rc_local_ddr_addr)
 		return 0;
 

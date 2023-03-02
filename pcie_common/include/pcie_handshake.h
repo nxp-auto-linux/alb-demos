@@ -9,16 +9,23 @@
 #define UNDEFINED_DATA 	0x0
 #define DEFAULT_TIMEOUT_US 10000
 
-#define COMMON_COMMAND_ARGUMENTS "a:b:e:c:n:w:s"
+#define COMMON_COMMAND_ARGUMENTS "a:b:e:c:n:w:m:s"
 #define MAX_BATCH_COMMANDS 10
 
 #define HEADER_SIZE	sizeof(struct s32_handshake)
 #define MAP_DDR_SIZE	(1024 * 1024 * 1)
-#define BUFFER_SIZE	(MAP_DDR_SIZE - HEADER_SIZE)
 
 /* A small buffer used for getting the RootComplex's DDR base address */
 struct s32_handshake {
     unsigned long long int rc_ddr_addr;
+};
+
+struct s32_common_args {
+	unsigned int map_size;
+	unsigned int show_count;
+	unsigned int skip_handshake;
+
+	char batch_commands[MAX_BATCH_COMMANDS + 1];
 };
 
 /* Handshake function which waits until RC sends its DDR base address
@@ -38,13 +45,11 @@ int pcie_notify_ep(struct s32_handshake *phandshake,
 int pcie_parse_rc_command_arguments(int argc, char *argv[],
 	unsigned long int *rc_local_ddr_addr,
 	unsigned long int *ep_bar_addr,
-	unsigned int *show_count,
-	unsigned int *skip_handshake,
-	char *batch_commands);
+	struct s32_common_args *common
+);
 int pcie_parse_ep_command_arguments(int argc, char *argv[],
 	unsigned long int *ep_pcie_base_address,
 	unsigned long int *ep_local_ddr_addr,
 	unsigned int *bar_number,
-	unsigned int *show_count,
-	unsigned int *skip_handshake,
-	char *batch_commands);
+	struct s32_common_args *common
+);
