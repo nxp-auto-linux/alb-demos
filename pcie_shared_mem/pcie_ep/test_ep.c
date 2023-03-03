@@ -77,8 +77,8 @@ int main(int argc, char *argv[])
 	unsigned int *mapPCIe = NULL;
 	unsigned long int rc_ddr_addr = UNDEFINED_DATA;
 	int i = 0;
-	unsigned int *src_buff ;
-	unsigned int *dest_buff ;
+	void *src_buff ;
+	void *dest_buff ;
 	unsigned char cmd = 0xff;
 	struct timespec ts;
 
@@ -125,8 +125,12 @@ int main(int argc, char *argv[])
 	action.sa_flags = SA_NODEFER;		/* do not block SIGUSR1 within sig_handler_int */
 	sigaction(SIGUSR1, &action, NULL);	/* attach action with SIGIO */
 
-	src_buff = (unsigned int *)malloc(mapsize);
-	dest_buff = (unsigned int *)malloc(mapsize);
+	src_buff = malloc(mapsize);
+	dest_buff = malloc(mapsize);
+	if (!src_buff || !dest_buff) {
+		perror("Cannot allocate mem for buffers");
+		goto err;
+	}
 
 	fd1 = open(EP_DBGFS_FILE, O_RDWR);
 	if (fd1 < 0) {
@@ -335,7 +339,8 @@ start:
 		break;
 	/* read some data from ddr , starting with base addr */
 	case 5:
-		pcie_show_mem(mapDDR, mapsize, "from local mapped DDR", show_count);
+		pcie_show_mem((unsigned int *)mapDDR, mapsize,
+			"from local mapped DDR", show_count);
 		break;
 	/* SEND DMA single  block */
 	case 6:

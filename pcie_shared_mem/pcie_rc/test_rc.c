@@ -55,8 +55,8 @@ int main(int argc, char *argv[])
 	unsigned int *mapDDR = NULL;
 	unsigned int *mapPCIe = NULL;
 
-	unsigned int *src_buff;
-	unsigned int *dest_buff;
+	void *src_buff;
+	void *dest_buff;
 
 	unsigned int totalsize = MAP_DDR_SIZE; /* 1M default */
 	unsigned int mapsize = MAP_DDR_SIZE - HEADER_SIZE;
@@ -96,14 +96,11 @@ int main(int argc, char *argv[])
 	printf ("EP BAR2 address = 0x%lx\n", ep_bar2_addr);
 	printf ("Total size = %d bytes\n\n", totalsize);
 
-	src_buff = (unsigned int *)malloc(mapsize);
-	if (!src_buff) {
-		printf("\n Cannot allocate mem for source buffer");
-	}
-
-	dest_buff = (unsigned int *)malloc(mapsize);
-	if (!dest_buff) {
-		printf("\n Cannot allocate heap for dest buffer");
+	src_buff = malloc(mapsize);
+	dest_buff = malloc(mapsize);
+	if (!src_buff || !dest_buff) {
+		perror("Cannot allocate mem for buffers");
+		goto err;
 	}
 
 	fd1 = open("/dev/mem", O_RDWR);
@@ -144,7 +141,7 @@ int main(int argc, char *argv[])
 	if (!skip_handshake) {
 		/* Connect to EP and send RC_DDR_ADDR */
 		printf("\n Connecting to EP\n");
-		if (pcie_notify_ep((struct s32_handshake *)mapPCIe,
+		if (pcie_notify_ep((struct s32_handshake *)mapPCIe_base,
 				rc_local_ddr_addr) < 0) {
 		    perror("Unable to send RC local DDR address to EP\n");
 		    goto err;
@@ -282,7 +279,8 @@ start :
 		break;
 	case 5 :
 		/* Read DDR area(minimal check). Can verify what EP has written */
-		pcie_show_mem(mapDDR, mapsize, "from local mapped DDR", show_count);
+		pcie_show_mem((unsigned int *)mapDDR, mapsize,
+			"from local mapped DDR", show_count);
 		break;
 	case 6:
 	{
