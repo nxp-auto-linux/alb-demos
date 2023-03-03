@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 
 	if (pcie_parse_ep_command_arguments(argc, argv,
 			&ep_pcie_base_address, &ep_local_ddr_addr, &bar_number, &args)) {
-		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-i <BAR index>][-w count][-s][-c <commands>]\n\n", argv[0]);
+		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-n <BAR index>][-m <memsize>][-w <count>][-s][-c <commands>]\n\n", argv[0]);
 		printf("E.g. for S32G2 (PCIe1, BAR0):\n %s -a 0xC0000000 -b 0x4800000000\n", argv[0]);
 		printf("By default, BAR0 is used.\n\n");
 		exit(1);

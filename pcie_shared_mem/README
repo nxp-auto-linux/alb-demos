@@ -72,22 +72,28 @@ local buffers.
 Usage:
 
 EP side:
-test_ep -b <pcie_base_address> -a <local_ddr_addr_hex> [-i <BAR index>] [-c <commands>]
-test_rc -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-c <commands>]
+test_ep -b <pcie_base_address> -a <local_ddr_addr_hex> [-n <BAR index>][-m <memsize>][-w <count>][-s][-c <commands>]
+test_rc -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-m memsize][-w count][-s][-c <commands>]
 
 Where:
 <local_ddr_addr_hex> is the local shared buffer, for both EP and RC.
 <pcie_base_address> is the base address of the PCIe controller address spacefor EP.
-(For S32G/R: 0x5800000000 for PCIe0 and 0x4800000000 for PCIe1).
+	(For S32G/R: 0x5800000000 for PCIe0 and 0x4800000000 for PCIe1).
 <ep_bar_addr_hex> is the EP BAR address shown during enumeration on RC.
+<BAR index> is the EP BAR to be used for communication
+	By default, BAR0 is used for EP and is recommended for S32G/R.
+	Make sure <ep_bar_addr_hex> matches the EP BAR for the correct RC PCIe controller.
 
-By default, BAR0 is used for EP and is recommended for S32G/R.
-Make sure <ep_bar_addr_hex> matches the EP BAR for the correct RC PCIe controller.
-
+<memsize> is the size of the shared memory buffer and of the PCIe mapped window.
+<count> is the number of double words displayed from the start and the end of the memory buffer
+	for command '5'.
 <commands> is a string composed of one-letter commands to be executed in a batch mode.
 It should contain the command letters '1' to '8' for EP, '1' to '6' for RC, plus 0 which
 means 5s delay. The exit commands are not required, as the applications will exit
 automatically after executing the batch.
+
+-s (skip handshake) can be used to re-run any of the test applications without having to handshake
+	again with the peer (EP or RC). This implies the handshake was performed previously.
 
 Examples:
 for S32G/R EP (PCIe1, BAR0): test_ep -a 0xC0000000 -b 0x4800000000
