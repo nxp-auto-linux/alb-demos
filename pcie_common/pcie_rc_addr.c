@@ -24,9 +24,9 @@ int pcie_notify_ep(struct s32_handshake *phandshake,
 		return 1; /* already set */
 
 	while (phandshake->rc_ddr_addr != UNDEFINED_DATA)
-        usleep(DEFAULT_TIMEOUT_US);
+	usleep(DEFAULT_TIMEOUT_US);
 
-    phandshake->rc_ddr_addr = rc_local_ddr_addr;
+	phandshake->rc_ddr_addr = rc_local_ddr_addr;
 	return 0;
 }
 

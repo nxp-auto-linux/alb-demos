@@ -14,7 +14,6 @@
  * published by the Free Software Foundation.
  */
 
-#define S32_MAGIC_NUM 'S'
 #define SETUP_OUTBOUND		_IOWR('S', 1, struct s32_outbound_region)
 #define SETUP_INBOUND		_IOWR('S', 2, struct s32_inbound_region)
 #define SEND_MSI			_IOWR('S', 3, unsigned long long)

@@ -135,12 +135,12 @@ void pcie_show_mem(unsigned int *buff,
 {
 	int i;
 
-	printf("\n First %d DWORDS(1DW = 4bytes) %s", count, mem_name);
+	printf("\n First %u DWORDS(1DW = 4bytes) %s", count, mem_name);
 	for (i = 0; i < count; i++) {
 		printf("\n *(buf + %#8x) = %#08x", i, *(buff + i));
 	}
 	/* Resize for last DWs */
-	printf("\n Last %d DWORDS(1DW = 4bytes) %s", count, mem_name);
+	printf("\n Last %u DWORDS(1DW = 4bytes) %s", count, mem_name);
 	for (i = (size / 4) - count; i < size / 4; i++) {
 		printf("\n *(buff + %#8x) = %#08x", i, *(buff + i));
 	}

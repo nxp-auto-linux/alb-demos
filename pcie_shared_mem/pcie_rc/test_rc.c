@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 		perror("/dev/mem DDR area mapping FAILED");
 		goto err;
 	} else {
-		printf("\n /dev/mem DDR area mapping OK");
+		printf("\n /dev/mem DDR area mapping OK\n");
 	}
 
 	mapDDR = mapDDR_base + HEADER_SIZE;
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
 		printf("\n Connecting to EP\n");
 		if (pcie_notify_ep((struct s32_handshake *)mapPCIe,
 				rc_local_ddr_addr) < 0) {
-		    perror("Unable to send RC local DDR address to EP");
+		    perror("Unable to send RC local DDR address to EP\n");
 		    goto err;
 		}
 	}
@@ -217,6 +217,7 @@ start :
 				CMD1_PATTERN,
 				CMD3_PATTERN, show_count,
 				CMD6_PATTERN);
+				printf("\n Select test (press 'h' to show all tests): ");
 				break;
 			default :
 				/* Omit enter key */

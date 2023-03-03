@@ -132,17 +132,15 @@ int main(int argc, char *argv[])
 	if (fd1 < 0) {
 		perror("Error while opening debug file");
 		goto err;
-	} else {
-		printf("\n Ep debug file opened successfully");
 	}
+	printf("\n Ep debug file opened successfully");
 
 	fd2 = open("/dev/mem", O_RDWR);
 	if (fd2 < 0) {
 		perror("Error while opening /dev/mem file");
 		goto err;
-	} else {
-		printf("\n Mem opened successfully");
 	}
+	printf("\n Mem opened successfully");
 
 	/* MAP DDR free 1M area. This was reserved at boot time */
 	mapDDR_base = mmap(NULL, totalsize,
@@ -151,9 +149,8 @@ int main(int argc, char *argv[])
 	if (!mapDDR_base) {
 		perror("/dev/mem DDR area mapping FAILED");
 		goto err;
-	} else {
-		printf("\n /dev/mem DDR area mapping OK");
 	}
+	printf("\n /dev/mem DDR area mapping OK");
 
 	/* Map PCIe area */
 	mapPCIe_base = mmap(NULL, totalsize,
@@ -162,9 +159,8 @@ int main(int argc, char *argv[])
 	if (!mapPCIe_base) {
 		perror("/dev/mem PCIe area mapping FAILED");
 		goto err;
-	} else {
-		printf("\n /dev/mem PCIe area mapping OK");
 	}
+	printf("\n /dev/mem PCIe area mapping OK\n");
 
 	mapDDR = mapDDR_base + HEADER_SIZE;
 	mapPCIe = mapPCIe_base + HEADER_SIZE;
@@ -177,9 +173,8 @@ int main(int argc, char *argv[])
 		if (ret < 0) {
 		    perror("Error while setting inbound region");
 		    goto err;
-		} else {
-		    printf("\n Inbound region setup successfully");
 		}
+		printf("\n Inbound region setup successfully");
 
 		printf("\n Connecting to RC...\n");
 		rc_ddr_addr = pcie_wait_for_rc((struct s32_handshake *)mapDDR_base);
@@ -191,9 +186,8 @@ int main(int argc, char *argv[])
 		if (ret < 0) {
 			perror("Error while setting outbound region");
 			goto err;
-		} else {
-			printf("\n Outbound region setup successfully");
 		}
+		printf("\n Outbound region setup successfully");
 	}
 
 	/* Sending pid by ioctl. This sets up signaling from kernel */
@@ -276,6 +270,7 @@ start:
 				CMD1_PATTERN,
 				CMD3_PATTERN, show_count,
 				CMD8_PATTERN);
+				printf("\n Select test (press 'h' to show all tests): ");
 				break;
 			default :
 				/* Omit enter key */
@@ -427,7 +422,7 @@ start:
 		goto start;
 
 err :
-		printf("\n too many errors");
+	printf("\n too many errors");
 
 exit :
 	close(fd1);
