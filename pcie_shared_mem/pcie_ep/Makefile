@@ -7,7 +7,7 @@ LDFLAGS	+= -lpthread
 CFLAGS	+= -g -I../../pcie_common/include
 
 OBJ	+= ../../pcie_common/pcie_ep_addr.o ../../pcie_common/pcie_benchmark.o \
-		test_ep.o
+		../../pcie_common/pcie_common.o test_ep.o
 DEPS	:= pcie_ops.h pcie_ep_addr.h pcie_handshake.h
 EXE	:= test_ep
 

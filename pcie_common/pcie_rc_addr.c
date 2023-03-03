@@ -2,7 +2,7 @@
  * Copyright 2018, 2021, 2023 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
- * 
+ *
  * PCIe HandShake between EndPoint and RootComplex,
  * RootComplex side.
  */
@@ -60,33 +60,11 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 		  case 'n':
 			printf("Argument \"-n\" does not apply to RootComplex\n");
 			break;
-		  case 'w':
-			if (args)
-				args->show_count = strtoul(optarg, NULL, 10);
-			else
-				fprintf(stderr, "Unsupported option '-w'\n");
-			break;
-		  case 'm':
-			if (args)
-				args->map_size = strtoul(optarg, NULL, 10);
-			else
-				fprintf(stderr, "Unsupported option '-m'\n");
-			break;
-		  case 's':
-			if (args)
-				args->skip_handshake = 1;
-			else
-				fprintf(stderr, "Unsupported option '-s'\n");
-			break;
-		  case 'c':
-			if (args)
-				strncpy(args->batch_commands, optarg, MAX_BATCH_COMMANDS);
-			else
-				fprintf(stderr, "Unsupported option '-c'\n");
-			break;
+		  default:
+			pcie_parse_common_arguments(c, optarg, args);
+
 		}
 
-	args->batch_commands[MAX_BATCH_COMMANDS] = 0;
 	if (*ep_bar_addr && *rc_local_ddr_addr)
 		return 0;
 

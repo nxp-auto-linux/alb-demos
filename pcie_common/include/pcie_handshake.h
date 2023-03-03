@@ -13,7 +13,13 @@
 #define MAX_BATCH_COMMANDS 10
 
 #define HEADER_SIZE	sizeof(struct s32_handshake)
+/* Default 1MB shared mem */
 #define MAP_DDR_SIZE	(1024 * 1024 * 1)
+/* MAx 8MB shared mem, as this is the amount reserved in the device tree */
+#define MAP_DDR_SIZE_MAX	(1024 * 1024 * 8)
+
+#define SHOW_COUNT	2
+#define SHOW_COUNT_MAX	8
 
 /* A small buffer used for getting the RootComplex's DDR base address */
 struct s32_handshake {
@@ -52,4 +58,7 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 	unsigned long int *ep_local_ddr_addr,
 	unsigned int *bar_number,
 	struct s32_common_args *common
+);
+int pcie_parse_common_arguments(int opt, char *optarg,
+	struct s32_common_args *args
 );
