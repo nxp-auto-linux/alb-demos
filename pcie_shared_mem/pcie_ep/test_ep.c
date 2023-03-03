@@ -347,8 +347,8 @@ start:
 		dma_single.flags = 0;
 		dma_flag = 0;
 		dma_single.size = mapsize;
-		dma_single.sar = ep_local_ddr_addr;
-		dma_single.dar = ep_pcie_base_address;
+		dma_single.sar = ep_local_ddr_addr + HEADER_SIZE;
+		dma_single.dar = ep_pcie_base_address + HEADER_SIZE;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_WRITE_ELEM | DMA_FLAG_EN_DONE_INT | DMA_FLAG_LIE);
 
@@ -365,8 +365,8 @@ start:
 		dma_single.flags = 0;
 		dma_flag = 0;
 		dma_single.size = mapsize;
-		dma_single.sar = ep_pcie_base_address;
-		dma_single.dar = ep_local_ddr_addr;
+		dma_single.sar = ep_pcie_base_address + HEADER_SIZE;
+		dma_single.dar = ep_local_ddr_addr + HEADER_SIZE;
 		dma_single.ch_num = 0;
 		dma_single.flags = (DMA_FLAG_READ_ELEM | DMA_FLAG_EN_DONE_INT  | DMA_FLAG_LIE);
 
