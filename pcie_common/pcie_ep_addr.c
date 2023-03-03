@@ -18,7 +18,6 @@
 #include <string.h>
 
 /* Inbound region structure */
-/* TODO: don't use region index and take next available from the driver */
 struct s32_inbound_region inb1 = {
     0,			/* BAR0 by default */
     UNDEFINED_DATA,	/* locally-mapped DDR on EP (target addr) */
@@ -26,7 +25,6 @@ struct s32_inbound_region inb1 = {
 };
 
 /* Outbound region structure */
-/* TODO: don't use region index and take next available from the driver */
 struct s32_outbound_region outb1 = {
     UNDEFINED_DATA,	/* target_addr, to be filled from handshake data */
     UNDEFINED_DATA,	/* base_addr, to be filled afterwards */

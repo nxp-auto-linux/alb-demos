@@ -57,8 +57,8 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 			ep_bar_addr_str = optarg;
 			*ep_bar_addr = strtoul(ep_bar_addr_str, NULL, 16);
 			break;
-		  case 'i':
-			printf("Argument \"-i\" does not apply to RootComplex\n");
+		  case 'n':
+			printf("Argument \"-n\" does not apply to RootComplex\n");
 			break;
 		  case 'w':
 			if (args)
