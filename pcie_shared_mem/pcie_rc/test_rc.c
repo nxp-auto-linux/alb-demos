@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 	unsigned short int go1 = 0;
 	unsigned short int go2 = 0;
 	char word[256];
-	unsigned long int ep_bar2_addr = 0;
+	unsigned long int ep_bar_addr = 0;
 	unsigned long int rc_local_ddr_addr = 0;
 	char batch_commands[MAX_BATCH_COMMANDS + 1] = {0,};
 	int batch_idx = 0;
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 	struct timespec ts;
 
 	if (pcie_parse_rc_command_arguments(argc, argv,
-			&rc_local_ddr_addr, &ep_bar2_addr, &args)) {
+			&rc_local_ddr_addr, &ep_bar_addr, &args)) {
 		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-m <memsize>][-w <count>][-s][-c <commands>]\n\n", argv[0]);
 		printf("E.g. for S32G2 (PCIe0, EP using BAR0):\n %s -a 0xC0000000 -e 0x4800100000\n\n", argv[0]);
 		printf("Make sure <ep_bar_addr_hex> matches the EP BAR for the correct RC PCIe controller.\n");
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	skip_handshake = args.skip_handshake;
 
 	printf ("RC local DDR address = 0x%lx\n", rc_local_ddr_addr);
-	printf ("EP BAR2 address = 0x%lx\n", ep_bar2_addr);
+	printf ("EP BAR address = 0x%lx\n", ep_bar_addr);
 	printf ("Total size = %d bytes\n\n", totalsize);
 
 	src_buff = malloc(mapsize);
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 	/* MAP PCIe area */
 	mapPCIe_base = mmap(NULL, totalsize,
 			PROT_READ | PROT_WRITE,
-			MAP_SHARED, fd1, ep_bar2_addr);
+			MAP_SHARED, fd1, ep_bar_addr);
 	if (!mapPCIe_base) {
 		perror("/dev/mem PCIe area mapping FAILED");
 		goto err;
@@ -234,13 +234,13 @@ start :
 	case 1: /* Write to PCIe area */
 		memset(src_buff, CMD1_PATTERN, mapsize);
 		pcie_test_start(&ts);
-		memcpy(mapPCIe, src_buff, mapsize);
+		memcpy(mapPCIe, (unsigned int *)src_buff, mapsize);
 
 		pcie_test_stop(&ts, "1 : 1MB Write", mapsize, 0);
 		break;
 	case 2 : /* Read from PCIe area */
-		/* Clear local buffer*/
-		pcie_fill_dev_mem(mapDDR, mapsize, 0);
+		/* Clear local DDR_BASE + 1M */
+		pcie_fill_dev_mem(mapDDR, mapsize, 0x0U);
 		pcie_test_start(&ts);
 		/* Copy from EP to local buffer */
 		memcpy(mapDDR, mapPCIe, mapsize);
@@ -330,7 +330,7 @@ err :
 	printf("\n Too many errors");
 
 exit :
-	close(fd1);
+	if (fd1 >= 0) close(fd1);
 	printf("\n Gonna exit now\n");
 	exit(0);
 }
