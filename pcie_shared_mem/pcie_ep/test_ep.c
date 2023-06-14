@@ -68,8 +68,8 @@ static void *loop_pcie_write(void *va)
 
 int main(int argc, char *argv[])
 {
-	int fd1;
-	int fd2;
+	int fd1 = -1;
+	int fd2 = -1;
 	int ret = 0;
 	void *mapDDR_base = NULL;
 	void *mapPCIe_base = NULL;
@@ -292,14 +292,14 @@ start:
 	case 0:
 		sleep(5);
 		break;
-	/* Single 1M bytes Write to LS_RC mem */
+	/* Single 1M bytes Write to RC mem */
 	case 1:
 		memset(src_buff, CMD1_PATTERN, mapsize);
 		pcie_test_start(&ts);
 		memcpy(mapPCIe, src_buff, mapsize);
 		pcie_test_stop(&ts, "1 : 1MB Write", mapsize, 0);
 		break;
-	/* Single 1M bytes Read from LS_RC mem */
+	/* Single 1M bytes Read from RC mem */
 	case 2:
 		/* Clear local DDR_BASE + 1M */
 		pcie_fill_dev_mem(mapDDR, mapsize, 0x0U);
@@ -428,8 +428,8 @@ err :
 	printf("\n too many errors");
 
 exit :
-	close(fd1);
-	close(fd2);
+	if (fd1 >= 0) close(fd1);
+	if (fd2 >= 0) close(fd2);
 	printf("\n Gonna exit now\n");
 	exit(0);
 }
