@@ -234,17 +234,16 @@ start :
 	case 1: /* Write to PCIe area */
 		memset(src_buff, CMD1_PATTERN, mapsize);
 		pcie_test_start(&ts);
-		memcpy((unsigned int *)mapPCIe, (unsigned int *)src_buff, mapsize);
+		memcpy(mapPCIe, src_buff, mapsize);
 
 		pcie_test_stop(&ts, "1 : 1MB Write", mapsize, 0);
 		break;
 	case 2 : /* Read from PCIe area */
 		/* Clear local buffer*/
-		memset(mapDDR, 0x0, mapsize);
+		pcie_fill_dev_mem(mapDDR, mapsize, 0);
 		pcie_test_start(&ts);
 		/* Copy from EP to local buffer */
 		memcpy(mapDDR, mapPCIe, mapsize);
-
 		pcie_test_stop(&ts, "2 : 1MB Read", mapsize, 0);
 		break;
 	case 3:
@@ -273,9 +272,7 @@ start :
 		break;
 	case 4 :
 		/* Fill local DDR_BASE + 1M with DW pattern 0x55AA55AA */
-		for (i = 0 ; i < mapsize / 4 ; i++) {
-			*(mapDDR + i) = (unsigned int)0x55AA55AA;
-		}
+		pcie_fill_dev_mem(mapDDR, mapsize, 0x55AA55AAU);
 		break;
 	case 5 :
 		/* Read DDR area(minimal check). Can verify what EP has written */

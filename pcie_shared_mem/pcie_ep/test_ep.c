@@ -301,8 +301,8 @@ start:
 		break;
 	/* Single 1M bytes Read from LS_RC mem */
 	case 2:
-		/* Clear local buffer*/
-		memset(mapDDR, 0x0, mapsize);
+		/* Clear local DDR_BASE + 1M */
+		pcie_fill_dev_mem(mapDDR, mapsize, 0x0U);
 		pcie_test_start(&ts);
 		memcpy(mapDDR, mapPCIe, mapsize);
 		pcie_test_stop(&ts, "2 : 1MB Read", mapsize, 0);
@@ -333,9 +333,7 @@ start:
 		break;
 	/* Clear local mapped DDR */
 	case 4:
-		for (i = 0 ; i < mapsize / 4; i++) {
-			*(mapDDR + i) = 0xdeadbeef;
-		}
+		pcie_fill_dev_mem(mapDDR, mapsize, 0xDEADBEEFU);
 		break;
 	/* read some data from ddr , starting with base addr */
 	case 5:

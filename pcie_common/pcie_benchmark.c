@@ -145,3 +145,18 @@ void pcie_show_mem(unsigned int *buff,
 		printf("\n *(buff + %#8x) = %#08x", i, *(buff + i));
 	}
 }
+
+void pcie_fill_dev_mem(volatile unsigned int *buff,
+		unsigned int size,
+		unsigned int pattern)
+{
+	unsigned int i;
+
+	/* On device or non-cacheable memory, memset crashes */
+	for (i = 0 ; i < size / sizeof(*buff) ; i++) {
+		buff[i] = pattern;
+	}
+
+	/* Flush the cache */
+	__builtin___clear_cache(buff, size);
+}
