@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2021, 2023 NXP
+ * Copyright 2018, 2021, 2023-2024 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  * 
@@ -9,7 +9,7 @@
 #define UNDEFINED_DATA 	0x0
 #define DEFAULT_TIMEOUT_US 10000
 
-#define COMMON_COMMAND_ARGUMENTS "a:b:e:c:n:w:m:s"
+#define COMMON_COMMAND_ARGUMENTS "a:b:e:c:n:w:m:io"
 #define MAX_BATCH_COMMANDS 10
 
 #define HEADER_SIZE	sizeof(struct s32_handshake)
@@ -29,7 +29,8 @@ struct s32_handshake {
 struct s32_common_args {
 	unsigned int map_size;
 	unsigned int show_count;
-	unsigned int skip_handshake;
+	unsigned int config_inbound;
+	unsigned int config_outbound;
 
 	char batch_commands[MAX_BATCH_COMMANDS + 1];
 };

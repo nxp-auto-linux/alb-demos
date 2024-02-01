@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, 2021, 2023 NXP
+ * Copyright 2016, 2021, 2023-2024 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  */
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 
 	if (pcie_parse_rc_command_arguments(argc, argv,
 			&rc_local_ddr_addr, &ep_bar_addr, &args)) {
-		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-m <memsize>][-w <count>][-s][-c <commands>]\n\n", argv[0]);
+		printf("\nUsage:\n%s -a <rc_local_ddr_addr_hex> -e <ep_bar_addr_hex> [-m <memsize>][-w <count>][-c <commands>]\n\n", argv[0]);
 		printf("E.g. for S32G2 (PCIe0, EP using BAR0):\n %s -a 0xC0000000 -e 0x4800100000\n\n", argv[0]);
 		printf("Make sure <ep_bar_addr_hex> matches the EP BAR for the correct RC PCIe controller.\n");
 		printf("By default, the EPs are using BAR0.\n\n");
@@ -90,7 +90,6 @@ int main(int argc, char *argv[])
 	totalsize = args.map_size;
 	mapsize = totalsize - HEADER_SIZE;
 	show_count = args.show_count;
-	skip_handshake = args.skip_handshake;
 
 	printf ("RC local DDR address = 0x%lx\n", rc_local_ddr_addr);
 	printf ("EP BAR address = 0x%lx\n", ep_bar_addr);

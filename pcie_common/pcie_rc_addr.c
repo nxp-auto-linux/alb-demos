@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2021, 2023 NXP
+ * Copyright 2018, 2021, 2023-2024 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  *
@@ -47,6 +47,11 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 	while ((c = getopt (argc, argv, COMMON_COMMAND_ARGUMENTS)) != -1)
 		switch (c) {
 		  case 'a':
+			if (!optarg) {
+				fprintf(stderr, "Missing value for option '-%c'\n",
+					(char)c);
+				return -1;
+			}
 			rc_local_ddr_addr_str = optarg;
 			*rc_local_ddr_addr = strtoul(rc_local_ddr_addr_str, NULL, 16);
 			break;
@@ -54,6 +59,11 @@ int pcie_parse_rc_command_arguments(int argc, char *argv[],
 			printf("Argument \"-b\" does not apply to RootComplex\n");
 			break;
 		  case 'e':
+			if (!optarg) {
+				fprintf(stderr, "Missing value for option '-%c'\n",
+					(char)c);
+				return -1;
+			}
 			ep_bar_addr_str = optarg;
 			*ep_bar_addr = strtoul(ep_bar_addr_str, NULL, 16);
 			break;

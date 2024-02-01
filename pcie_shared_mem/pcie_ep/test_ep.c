@@ -1,5 +1,5 @@
 /*
- * Copyright 2016, 2021, 2023 NXP
+ * Copyright 2016, 2021, 2023-2024 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  */
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	unsigned long int ep_local_ddr_addr = 0;
 	unsigned int bar_number = 0; /* BAR0 by default */
 	unsigned int show_count = SHOW_COUNT;
-	unsigned int skip_handshake = 0;
+	unsigned int config_inbound = 0, config_outbound = 0;
 
 	/* Struct for DMA ioctl */
 	struct dma_data_elem dma_single = {0,0,0,0,0,0};
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 
 	if (pcie_parse_ep_command_arguments(argc, argv,
 			&ep_pcie_base_address, &ep_local_ddr_addr, &bar_number, &args)) {
-		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-n <BAR index>][-m <memsize>][-w <count>][-s][-c <commands>]\n\n", argv[0]);
+		printf("\nUsage:\n%s -b <pcie_base_address> -a <local_ddr_addr_hex> [-n <BAR index>][-m <memsize>][-w <count>][-i][-o][-c <commands>]\n\n", argv[0]);
 		printf("E.g. for S32G2 (PCIe1, BAR0):\n %s -a 0xC0000000 -b 0x4800000000\n", argv[0]);
 		printf("By default, BAR0 is used.\n\n");
 		exit(1);
@@ -112,7 +112,8 @@ int main(int argc, char *argv[])
 	totalsize = args.map_size;
 	mapsize = totalsize - HEADER_SIZE;
 	show_count = args.show_count;
-	skip_handshake = args.skip_handshake;
+	config_inbound = args.config_inbound;
+	config_outbound = args.config_outbound;
 
 	printf ("EP local PCIe base address = 0x%lX\n", ep_pcie_base_address);
 	printf ("EP local DDR address = 0x%lX\n", ep_local_ddr_addr);
@@ -171,7 +172,7 @@ int main(int argc, char *argv[])
 	printf ("Local DDR base: 0x%lX; DDR buffer = 0x%lX\n",
 		(uintptr_t)mapDDR_base, (uintptr_t)mapDDR);
 
-	if (!skip_handshake) {
+	if (config_inbound) {
 		/* Setup inbound window for receiving data into local shared buffer */
 		ret = pcie_init_inbound(ep_local_ddr_addr, bar_number, fd1);
 		if (ret < 0) {
@@ -179,11 +180,13 @@ int main(int argc, char *argv[])
 		    goto err;
 		}
 		printf("\n Inbound region setup successfully");
+	}
 
-		printf("\n Connecting to RC...\n");
-		rc_ddr_addr = pcie_wait_for_rc((struct s32_handshake *)mapDDR_base);
-		printf(" RC_DDR_ADDR = %lx", rc_ddr_addr);
+	printf("\n Connecting to RC...\n");
+	rc_ddr_addr = pcie_wait_for_rc((struct s32_handshake *)mapDDR_base);
+	printf(" RC_DDR_ADDR = %lx", rc_ddr_addr);
 
+	if (config_outbound) {
 		/* Setup outbound window for accessing RC mem */
 		ret = pcie_init_outbound(ep_pcie_base_address,
 			rc_ddr_addr, totalsize, fd1);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2021, 2023 NXP
+ * Copyright 2018, 2021, 2023-2024 NXP
  *
  * SPDX-License-Identifier: GPL-2.0+
  *
@@ -48,14 +48,14 @@ int pcie_init_outbound(unsigned long long int base_address,
 	unsigned long long int targ_addr,
 	unsigned int buff_size, int fd)
 {
-    int ret = 0;
+	int ret = 0;
 
 	outb1.base_addr = base_address;
-    outb1.target_addr = targ_addr;
-    outb1.size = buff_size;
+	outb1.target_addr = targ_addr;
+	outb1.size = buff_size;
 
-    ret = ioctl(fd, SETUP_OUTBOUND, &outb1);
-    return ret;
+	ret = ioctl(fd, SETUP_OUTBOUND, &outb1);
+	return ret;
 }
 
 unsigned long long int pcie_wait_for_rc(struct s32_handshake *phandshake)
@@ -89,10 +89,20 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 	while ((c = getopt (argc, argv, COMMON_COMMAND_ARGUMENTS)) != -1)
 		switch (c) {
 		  case 'a':
+			if (!optarg) {
+				fprintf(stderr, "Missing value for option '-%c'\n",
+					(char)c);
+				return -1;
+			}
 			ep_local_ddr_addr_str = optarg;
 			*ep_local_ddr_addr = strtoul(ep_local_ddr_addr_str, NULL, 16);
 			break;
 		  case 'b':
+			if (!optarg) {
+				fprintf(stderr, "Missing value for option '-%c'\n",
+					(char)c);
+				return -1;
+			}
 			ep_pcie_base_address_str = optarg;
 			*ep_pcie_base_address = strtoul(ep_pcie_base_address_str, NULL, 16);
 			break;
@@ -100,6 +110,11 @@ int pcie_parse_ep_command_arguments(int argc, char *argv[],
 			printf("Argument \"-e\" does not apply to EndPoint\n");
 			break;
 		  case 'n':
+			if (!optarg) {
+				fprintf(stderr, "Missing value for option '-%c'\n",
+					(char)c);
+				return -1;
+			}
 			bar_number_str = optarg;
 			*bar_number = (unsigned int)strtoul(bar_number_str, NULL, 10);
 			if (*bar_number >= EP_NUM_BARS) {
