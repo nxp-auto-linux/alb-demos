@@ -5,7 +5,7 @@
  * Copyright (C) 2013 Kosagi
  *              http://www.kosagi.com
  * Copyright (C) 2014-2015 Freescale Semiconductor, Inc. All Rights Reserved.
- * Copyright 2016, 2021, 2023 NXP
+ * Copyright 2016, 2021, 2023-2024 NXP
  *
  * Author: Sean Cross <xobs@kosagi.com>
  *
@@ -45,12 +45,14 @@ struct dma_data_elem {
 };
 
 struct s32_inbound_region {
+	int pcie_id;
 	unsigned int  bar_nr;
 	unsigned int  target_addr;
 	unsigned int  region;
 };
 
 struct s32_outbound_region {
+	int pcie_id;
 	unsigned long long int target_addr;
 	unsigned long long int base_addr;
 	unsigned int  size;

@@ -19,6 +19,7 @@
 
 /* Inbound region structure */
 struct s32_inbound_region inb1 = {
+    0,			/* No ID is needed; use 0 to satisfy the API */
     0,			/* BAR0 by default */
     UNDEFINED_DATA,	/* locally-mapped DDR on EP (target addr) */
     0			/* region 0 */
@@ -26,6 +27,7 @@ struct s32_inbound_region inb1 = {
 
 /* Outbound region structure */
 struct s32_outbound_region outb1 = {
+    0,			/* No ID is needed; use 0 to satisfy the API */
     UNDEFINED_DATA,	/* target_addr, to be filled from handshake data */
     UNDEFINED_DATA,	/* base_addr, to be filled afterwards */
     UNDEFINED_DATA,	/* size >= 64K(min for PCIE on S32), to be filled afterwards */
