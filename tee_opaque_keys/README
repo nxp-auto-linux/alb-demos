@@ -1,0 +1,124 @@
+OP-TEE Opaque Keys Examples
+==================================
+
+Contents
+--------
+* About
+* Requirements
+* Compilation and running
+* Application description
+* Credits
+
+About
+-----
+This demo showcases the use of opaque keys in the TrustZone Execution
+Environtment (TEE). This new feature aims to enhance the overall security
+of the TrustZone by concealing the key material, making it 'opaque' to
+all the consumers in the trust chain. Instead of passing around the plain
+key material, applications will reference keys through an ID, called a
+Key Handle.
+
+Requirements
+------------
+
+The following list of components are required for the build and run of this example:
+* [optee_os](https://github.com/nxp-auto-linux/optee_os)
+* [optee_client](https://github.com/OP-TEE/optee_client)
+
+The compilation of these components is a prerequisite to this example. Manual
+build steps instructions are included in the repositories and the Linux BSP
+User Manual. For a successfull run of the example, the image on the target
+platform must include these OP-TEE components. The easiest way of generating
+an OP-TEE-ready image is to use the Yocto build tool. For more details on this
+please consult the Linux BSP User Manual.
+
+Compilation and running
+-----------------------
+
+From the root folder of this repository enter the following command:  
+
+make CROSS_COMPILE=</path/to/your/toolchain/dir>/bin/aarch64-none-linux-gnu- \
+     TA_DEV_KIT_DIR=</path/to/optee_os>/out/arm-plat-s32/export-ta_arm64 \
+     TEEC_EXPORT=</path/to/optee_client>/out/export/usr tee_opaque_keys
+
+Please note the two variables TA_DEV_KIT_DIR & TEEC_EXPORT:
+
+1. **TA_DEV_KIT_DIR**  
+It must point to the TA Development Kit. As indicated
+in the make command, the kit is located in the optee_os repository. Compiling
+optee_os will result in the compilation of the development kit as well.
+
+2. **TEEC_EXPORT**  
+It must point to the TEE Client API. As indicated
+in the make command, the interface is located in the optee_client repository.
+Compiling optee_client will result in the compilation of the TEE Client API as well.
+
+The succesfull execution of the make command generates two binaries:
+<tee_opaque_keys/host/optee_example_hse_opaque_keys> and
+<tee_opaque_keys/ta/5fe52085-5121-4cdf-b800-4964b8dd0c94.ta>.
+
+Running the example: copy the TA binary, i.e 5fe52085-5121-4cdf-b800-4964b8dd0c94.ta
+in the rootfs of the target platform at the location </lib/optee_armtz/>. Copy
+the normal world application, i.e. optee_example_hse_opaque_keys in the rootfs
+of the target platform and run:  
+	`./optee_example_hse_embed_handle`
+
+For helpful information on running the example, run the application with the argument
+'-h':  
+	`./optee_example_hse_embed_handle -h`
+
+Application Description
+-----------------------
+The TEE Internal Core API is used within the TEE to define a set of functionalities
+such as cryptographic operations, secure storage, arithmetic operations etc.
+TAs request these services from optee_os through a standardized set of C functions
+that are implemented in optee_os.
+
+Some of the cryptographic functions defined in the TEE Internal Core API use a
+key to perform their operations. The API mandates that the keys are passed
+in plain format from the TAs to optee_os. Therefore, in the case of a TEE exploit,
+the key material might leak.
+
+The opaque key feature challenges the status quo and provides and alternative
+way of passing keys. Instead of providing the raw key material, the example
+references the key through an ID called a Key Handle. To do this, the opaque key
+feature relies on the Hardware Secruity Engine's (HSE) capability of storing keys
+and using them for crypto operations without exposure to the normal world or
+the secure world. The keys are kept in a catalog where each key is uniquely
+identified through a Key Handle. Of course, the keys should be imported in the
+catalog before using the opaque key feature.
+
+The 4-byte Key Handle is embedded within the same buffer that is normally used
+by the API for transmitting the plain key material. A 'magic number' is
+prepended to the Key Handle so that optee_os can detect the presence of the
+embedded Key Handle within the buffer. After extracting the Key Handle, optee_os
+will send the cryptographic request that uses this Key Handle to HSE.
+
+This feature does not hinder in any way the normal use of plain key buffers.
+However, the key space is reduced because of the possbile arising collisions:
+keys which happen to have the exact bytes as a valid "magic + key_handle"
+cannot be used anymore as the TEE will interpret the buffer as an embedded
+key handle.
+
+This example is made of two distinct parts:
+1. Import the plain key material into the HSE Non-Volatile Memory (NVM) Catalog  
+2. Use the Key Handles associated with these keys to perform cryptographic
+operations.
+
+The first part uses a Pseudo Trusted Application (PTA) to import some dummy
+keys into the HSE NVM Catalog. A PTA is an interface exposed by the optee_os core
+and is implemented directly in optee_os, as opposed to TAs which are individual
+entities. The example application provides the key material and the key
+information that is made of key flags (used for specifying key attributes, usage or
+permissions), key type and the key handle to the PTA according to its
+interface defined in <optee_os/lib/libutee/include/pta_hse_kp.h>. The success of
+this operation means that the keys have been imported in the key catalog and can
+now be referenced through their specific Key Handles.
+
+The second part performs three cryptographic operations: AES-ECB cipher, RSA NOPAD
+encrypt & decrypt and ECC P-192 sign & verify. Through these operations, the
+example showcases how the key handle is embedded within the TEE buffers.
+
+Credits
+-------
+* Copyright 2024 NXP
