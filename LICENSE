@@ -10,5 +10,4 @@ The applicable license for each folder is specified below and also is detailed i
 | networking          | BSD-3-Clause  |
 | pci_common          | GPL-2.0       |
 | pci_shared_mem      | GPL-2.0       |
-| pci_virt_eth        | GPL-2.0       |
 | tee_opaque_keys     | BSD-3-Clause  |
