@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Copyright 2024 NXP
+ * Copyright 2024, 2026 NXP
  */
 
 #include <err.h>
@@ -18,19 +18,19 @@
 #include <pta_hse_kp.h>
 
 /* HSE Key groups are part of the NVM Catalog */
-#define HSE_AES_KEY_GROUP	8
-#define HSE_AES_KEY_SLOT	1
+#define HSE_AES_KEY_GROUP	3
+#define HSE_AES_KEY_SLOT	3
 
-#define HSE_RSA_PAIR_GROUP	6
+#define HSE_RSA_PAIR_GROUP	9
 #define HSE_RSA_PAIR_SLOT	0
 
-#define HSE_RSA_PUB_GROUP	5
+#define HSE_RSA_PUB_GROUP	10
 #define HSE_RSA_PUB_SLOT	0
 
-#define HSE_ECC_PAIR_GROUP	3
+#define HSE_ECC_PAIR_GROUP	11
 #define HSE_ECC_PAIR_SLOT	0
 
-#define HSE_ECC_PUB_GROUP	4
+#define HSE_ECC_PUB_GROUP	12
 #define HSE_ECC_PUB_SLOT	0
 
 #define PROVISION_KEYS_NUM	3
