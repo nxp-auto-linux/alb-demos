@@ -1,10 +1,10 @@
 #
-# Copyright 2016-2017,2022 NXP
+# Copyright 2016-2017,2022, 2026 NXP
 #
 # SPDX-License-Identifier:     GPL-2.0+
 #
 
-samples := multicore pcie_shared_mem gpio_libgpiod networking tee_opaque_keys
+samples := multicore pcie_shared_mem gpio_libgpiod networking tee_opaque_keys cdma
 #Add above all samples directories
 clean_samples = $(addprefix clean_,$(samples))
 install_samples = $(addprefix install_,$(samples))
